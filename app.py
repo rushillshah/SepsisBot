@@ -50,7 +50,7 @@ st.markdown("""
         margin-top: 0;
     }
     .metric-card {
-        background: #f8f9fa;
+        background: #1e1e2e;
         border-radius: 10px;
         padding: 20px;
         text-align: center;
@@ -66,25 +66,28 @@ st.markdown("""
         border-left-color: #2ca02c;
     }
     .explanation-box {
-        background: #f0f7ff;
+        background: #1a2332;
         border-radius: 8px;
         padding: 16px;
         margin: 12px 0;
-        border: 1px solid #d0e3ff;
+        border: 1px solid #2a4a6b;
+        color: #e0e0e0;
     }
     .clinical-box {
-        background: #fff8f0;
+        background: #2a2010;
         border-radius: 8px;
         padding: 16px;
         margin: 12px 0;
-        border: 1px solid #ffe0b2;
+        border: 1px solid #5a4a20;
+        color: #e0d8c8;
     }
     .tech-box {
-        background: #f0fff0;
+        background: #102a10;
         border-radius: 8px;
         padding: 16px;
         margin: 12px 0;
-        border: 1px solid #b2e0b2;
+        border: 1px solid #1a5a1a;
+        color: #c8e0c8;
     }
     div[data-testid="stExpander"] details summary p {
         font-size: 1rem;
@@ -565,7 +568,9 @@ def page_how_model_works():
         xgb_params = metrics.get("xgb_best_params", {})
         lr_params = metrics.get("lr_params", {})
 
-        col_lr, col_xgb = st.columns(2)
+        lstm_params = metrics.get("lstm_params", {})
+
+        col_lr, col_xgb, col_lstm = st.columns(3)
 
         with col_lr:
             st.markdown("#### Logistic Regression")
@@ -594,6 +599,20 @@ def page_how_model_works():
                 )
             else:
                 st.caption("Parameters not available")
+
+        with col_lstm:
+            st.markdown("#### LSTM (Sequence Model)")
+            if lstm_params:
+                param_rows = [
+                    {"Parameter": k, "Value": str(v)}
+                    for k, v in lstm_params.items()
+                ]
+                st.dataframe(
+                    pd.DataFrame(param_rows),
+                    use_container_width=True, hide_index=True,
+                )
+            else:
+                st.caption("Run pipeline with LSTM to see parameters")
 
         explain(
             clinical=(
@@ -638,52 +657,42 @@ def page_model_performance():
     # ── Full Metrics Comparison Table ────────────────────────────────────────
     st.markdown("### Full Metrics — Both Models on Hospital B (Unseen Data)")
 
-    metrics_table = pd.DataFrame({
-        "Metric": [
-            "AUC (Area Under ROC Curve)",
-            "ROC — Sensitivity (Recall / TPR)",
-            "ROC — Specificity (TNR)",
-            "Precision (PPV)",
-            "Recall (Sensitivity)",
-            "F1 Score",
-            "Gini Coefficient",
-            "PR-AUC (Precision-Recall AUC)",
-            "Optimal Threshold",
-        ],
-        "XGBoost": [
-            f"{auroc:.4f}",
-            f"{sens:.4f}",
-            f"{spec:.4f}",
-            f"{precision:.4f}",
-            f"{recall:.4f}",
-            f"{f1:.4f}",
-            f"{gini:.4f}",
-            f"{pr_auc:.4f}",
-            f"{metrics.get('optimal_threshold', 'N/A')}",
-        ],
-        "Logistic Regression": [
-            f"{metrics.get('lr_auroc', 'N/A')}",
-            f"{metrics.get('lr_sensitivity', 'N/A')}",
-            f"{metrics.get('lr_specificity', 'N/A')}",
-            f"{metrics.get('lr_precision', 'N/A')}",
-            f"{metrics.get('lr_recall', 'N/A')}",
-            f"{metrics.get('lr_f1', 'N/A')}",
-            f"{metrics.get('lr_gini', 'N/A')}",
-            f"{metrics.get('lr_pr_auc', 'N/A')}",
-            f"{metrics.get('lr_optimal_threshold', 'N/A')}",
-        ],
-        "Ideal": [
-            "1.0000",
-            "1.0000",
-            "1.0000",
-            "1.0000",
-            "1.0000",
-            "1.0000",
-            "1.0000",
-            "1.0000",
-            "~0.50",
-        ],
-    })
+    def _fmt(val):
+        if val is None or val == "N/A":
+            return "N/A"
+        try:
+            return f"{float(val):.4f}"
+        except (ValueError, TypeError):
+            return str(val)
+
+    metric_rows = [
+        "AUC (Area Under ROC Curve)",
+        "ROC — Sensitivity (Recall / TPR)",
+        "ROC — Specificity (TNR)",
+        "Precision (PPV)",
+        "Recall (Sensitivity)",
+        "F1 Score",
+        "Gini Coefficient",
+        "PR-AUC (Precision-Recall AUC)",
+        "Optimal Threshold",
+    ]
+    xgb_vals = [auroc, sens, spec, precision, recall, f1, gini, pr_auc, metrics.get("optimal_threshold")]
+    lr_vals = [metrics.get(k) for k in ["lr_auroc", "lr_sensitivity", "lr_specificity", "lr_precision", "lr_recall", "lr_f1", "lr_gini", "lr_pr_auc", "lr_optimal_threshold"]]
+    lstm_vals = [metrics.get(k) for k in ["lstm_auroc", "lstm_sensitivity", "lstm_specificity", "lstm_precision", "lstm_recall", "lstm_f1", "lstm_gini", "lstm_pr_auc", "lstm_optimal_threshold"]]
+    ideal_vals = ["1.0000"] * 8 + ["~0.50"]
+
+    table_data = {
+        "Metric": metric_rows,
+        "LSTM (seq=12)": [_fmt(v) for v in lstm_vals],
+        "XGBoost": [_fmt(v) for v in xgb_vals],
+        "Logistic Regression": [_fmt(v) for v in lr_vals],
+        "Ideal": ideal_vals,
+    }
+    # Only show LSTM column if we have LSTM data
+    if all(v is None for v in lstm_vals):
+        del table_data["LSTM (seq=12)"]
+
+    metrics_table = pd.DataFrame(table_data)
     st.dataframe(metrics_table, use_container_width=True, hide_index=True)
 
     explain(
@@ -734,6 +743,18 @@ def page_model_performance():
     with roc_col:
         if fpr and tpr:
             fig = go.Figure()
+            # LSTM curve first (if available) since it should be best
+            lstm_fpr = metrics.get("lstm_fpr", [])
+            lstm_tpr = metrics.get("lstm_tpr", [])
+            if lstm_fpr and lstm_tpr:
+                lstm_auroc = metrics.get("lstm_auroc", 0)
+                lstm_gini_val = metrics.get("lstm_gini", 0)
+                fig.add_trace(go.Scatter(
+                    x=lstm_fpr, y=lstm_tpr,
+                    mode="lines",
+                    name=f"LSTM (AUC = {lstm_auroc:.3f}, Gini = {lstm_gini_val:.3f})",
+                    line=dict(color="#d62728", width=2.5),
+                ))
             fig.add_trace(go.Scatter(
                 x=fpr, y=tpr,
                 mode="lines",

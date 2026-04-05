@@ -654,9 +654,6 @@ def page_model_performance():
     recall = metrics.get("recall", sens)
     gini = metrics.get("gini", 2 * auroc - 1)
 
-    # ── Full Metrics Comparison Table ────────────────────────────────────────
-    st.markdown("### Full Metrics — Both Models on Hospital B (Unseen Data)")
-
     def _fmt(val):
         if val is None or val == "N/A":
             return "N/A"
@@ -664,6 +661,69 @@ def page_model_performance():
             return f"{float(val):.4f}"
         except (ValueError, TypeError):
             return str(val)
+
+    # ── Cross-Validation Results (Primary) ───────────────────────────
+    cv_xgb_auroc = metrics.get("cv_xgb_auroc")
+    if cv_xgb_auroc is not None:
+        st.markdown("### Patient-Level Cross-Validation (Primary Results)")
+        st.caption("5-fold stratified CV on both hospitals — no patient in both train and val")
+
+        cv_table = pd.DataFrame({
+            "Metric": ["AUROC", "Gini", "Sensitivity (Recall)", "Specificity", "Precision", "F1", "PR-AUC"],
+            "XGBoost (CV)": [
+                _fmt(metrics.get("cv_xgb_auroc")),
+                _fmt(metrics.get("cv_xgb_gini")),
+                _fmt(metrics.get("cv_xgb_sensitivity")),
+                _fmt(metrics.get("cv_xgb_specificity")),
+                _fmt(metrics.get("cv_xgb_precision")),
+                _fmt(metrics.get("cv_xgb_f1")),
+                _fmt(metrics.get("cv_xgb_pr_auc")),
+            ],
+            "Logistic Reg (CV)": [
+                _fmt(metrics.get("cv_lr_auroc")),
+                _fmt(metrics.get("cv_lr_gini")),
+                _fmt(metrics.get("cv_lr_sensitivity")),
+                _fmt(metrics.get("cv_lr_specificity")),
+                _fmt(metrics.get("cv_lr_precision")),
+                _fmt(metrics.get("cv_lr_f1")),
+                _fmt(metrics.get("cv_lr_pr_auc")),
+            ],
+            "Ideal": ["1.0000", "1.0000", "1.0000", "1.0000", "1.0000", "1.0000", "1.0000"],
+        })
+        st.dataframe(cv_table, use_container_width=True, hide_index=True)
+
+        # CV metric cards
+        cv_auroc_std = metrics.get("cv_xgb_auroc_std", 0)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("CV AUROC (XGBoost)", f"{cv_xgb_auroc:.3f} +/- {cv_auroc_std:.3f}")
+        c2.metric("CV Sensitivity", _fmt(metrics.get("cv_xgb_sensitivity")))
+        c3.metric("CV Specificity", _fmt(metrics.get("cv_xgb_specificity")))
+        c4.metric("CV Precision", _fmt(metrics.get("cv_xgb_precision")))
+
+        explain(
+            clinical=(
+                "These are the <b>primary results</b> — the model was tested on patients it never "
+                "saw during training, with both hospitals mixed in every fold. Site-specific confounders "
+                "(hospital ward type, admission timing) have been removed. This is a much "
+                "fairer test than the cross-hospital results below."
+            ),
+            technical=(
+                f"5-fold patient-level stratified CV (StratifiedGroupKFold). "
+                f"XGBoost with Platt calibration via CalibratedClassifierCV. "
+                f"AUROC {cv_xgb_auroc:.3f} +/- {cv_auroc_std:.3f}. "
+                f"Features scaled via StandardScaler (fit on train fold only). "
+                f"Site confounders (Unit1, Unit2, HospAdmTime) removed from feature set. "
+                f"Stronger regularization: max_depth 3-5, min_child_weight 5-20, L1/L2 reg."
+            ),
+            audience=audience,
+        )
+
+        st.markdown("---")
+        st.markdown("### Cross-Hospital Holdout (Stress Test)")
+        st.caption("Train on Hospital A only, validate on Hospital B — tests worst-case site generalization")
+
+    # ── Full Metrics Comparison Table ────────────────────────────────────────
+    st.markdown("### Full Metrics — Both Models on Hospital B (Unseen Data)")
 
     metric_rows = [
         "AUC (Area Under ROC Curve)",

@@ -6,6 +6,7 @@ import pytest
 
 from src.config import (
     ALL_FEATURE_COLS,
+    EXCLUDED_FEATURES,
     LAB_COLS,
     ROLLING_COLS,
     ROLLING_STATS,
@@ -17,6 +18,7 @@ from src.features import (
     add_trend_features,
     build_feature_matrix,
     get_feature_names,
+    scale_features,
 )
 
 
@@ -286,5 +288,40 @@ class TestGetFeatureNames:
         expected = [
             c for c in imputed_df.columns
             if c not in {"patient_id", "hospital", "SepsisLabel"}
+            and c not in set(EXCLUDED_FEATURES)
         ]
         assert names == expected
+
+
+# ---------------------------------------------------------------------------
+# Tests: excluded features
+# ---------------------------------------------------------------------------
+
+
+class TestExcludedFeatures:
+    def test_excluded_features_not_in_x(self, imputed_df: pd.DataFrame) -> None:
+        X, y = build_feature_matrix(imputed_df)
+        for col in EXCLUDED_FEATURES:
+            assert col not in X.columns, f"{col} should be excluded from X"
+
+
+# ---------------------------------------------------------------------------
+# Tests: scale_features
+# ---------------------------------------------------------------------------
+
+
+class TestScaleFeatures:
+    def test_returns_scaled_arrays_and_scaler(self, imputed_df: pd.DataFrame) -> None:
+        X, y = build_feature_matrix(imputed_df)
+        mid = len(X) // 2
+        X_tr_s, X_val_s, scaler = scale_features(X.iloc[:mid], X.iloc[mid:])
+        assert X_tr_s.shape == X.iloc[:mid].shape
+        assert X_val_s.shape == X.iloc[mid:].shape
+        assert scaler is not None
+
+    def test_scaled_train_has_zero_mean(self, imputed_df: pd.DataFrame) -> None:
+        X, y = build_feature_matrix(imputed_df)
+        mid = len(X) // 2
+        X_tr_s, _, _ = scale_features(X.iloc[:mid], X.iloc[mid:])
+        means = np.abs(X_tr_s.mean())
+        assert (means < 0.1).all()

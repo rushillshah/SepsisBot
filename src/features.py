@@ -10,10 +10,12 @@ and ``{col}_hours_since`` columns present.
 """
 
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 from src.config import (
     ALL_FEATURE_COLS,
     DEMOGRAPHIC_COLS,
+    EXCLUDED_FEATURES,
     LABEL_COL,
     LAB_COLS,
     ROLLING_COLS,
@@ -27,7 +29,7 @@ from src.config import (
 _ROLLING_COLS_UNIQUE: list[str] = list(dict.fromkeys(ROLLING_COLS))
 
 # Columns that are metadata / identifiers, never features.
-_DROP_COLS = {"patient_id", "hospital", LABEL_COL}
+_DROP_COLS = {"patient_id", "hospital", LABEL_COL} | set(EXCLUDED_FEATURES)
 
 
 def add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -174,3 +176,22 @@ def build_feature_matrix(
     X = X.fillna(0.0)
 
     return X, y
+
+
+def scale_features(
+    X_train: pd.DataFrame,
+    X_val: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, StandardScaler]:
+    """Scale features using StandardScaler fit on training data only."""
+    scaler = StandardScaler()
+    X_train_scaled = pd.DataFrame(
+        scaler.fit_transform(X_train),
+        columns=X_train.columns,
+        index=X_train.index,
+    )
+    X_val_scaled = pd.DataFrame(
+        scaler.transform(X_val),
+        columns=X_val.columns,
+        index=X_val.index,
+    )
+    return X_train_scaled, X_val_scaled, scaler

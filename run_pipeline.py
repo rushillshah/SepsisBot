@@ -26,6 +26,7 @@ from src.evaluate import (
 from src.features import get_feature_names
 from src.imputation import impute
 from src.train import split_by_hospital, train_pipeline
+from src.train_cv import cross_validate_pipeline
 from src.train_lstm import predict_lstm, train_lstm_pipeline
 
 
@@ -36,6 +37,7 @@ def _build_dashboard_json(
     best_params: dict,
     feature_names: list[str],
     y_val: np.ndarray,
+    cv_results: dict,
 ) -> dict:
     """Assemble the JSON payload consumed by the Streamlit dashboard.
 
@@ -119,6 +121,23 @@ def _build_dashboard_json(
         "feature_importance": feature_importance,
         # Patient analysis
         "patient_analysis": patient_analysis,
+        # Cross-validation metrics (XGBoost)
+        "cv_xgb_auroc": cv_results["avg_xgb_metrics"]["auroc"]["mean"],
+        "cv_xgb_auroc_std": cv_results["avg_xgb_metrics"]["auroc"]["std"],
+        "cv_xgb_sensitivity": cv_results["avg_xgb_metrics"]["sensitivity"]["mean"],
+        "cv_xgb_specificity": cv_results["avg_xgb_metrics"]["specificity"]["mean"],
+        "cv_xgb_precision": cv_results["avg_xgb_metrics"]["precision"]["mean"],
+        "cv_xgb_f1": cv_results["avg_xgb_metrics"]["f1"]["mean"],
+        "cv_xgb_pr_auc": cv_results["avg_xgb_metrics"]["pr_auc"]["mean"],
+        "cv_xgb_gini": 2 * cv_results["avg_xgb_metrics"]["auroc"]["mean"] - 1,
+        # Cross-validation metrics (Logistic Regression)
+        "cv_lr_auroc": cv_results["avg_lr_metrics"]["auroc"]["mean"],
+        "cv_lr_sensitivity": cv_results["avg_lr_metrics"]["sensitivity"]["mean"],
+        "cv_lr_specificity": cv_results["avg_lr_metrics"]["specificity"]["mean"],
+        "cv_lr_precision": cv_results["avg_lr_metrics"]["precision"]["mean"],
+        "cv_lr_f1": cv_results["avg_lr_metrics"]["f1"]["mean"],
+        "cv_lr_pr_auc": cv_results["avg_lr_metrics"]["pr_auc"]["mean"],
+        "cv_lr_gini": 2 * cv_results["avg_lr_metrics"]["auroc"]["mean"] - 1,
     }
 
 
@@ -195,6 +214,10 @@ def run() -> None:
     imputed_df = impute(raw_df)
     save_processed(imputed_df, "imputed_data")
 
+    # ── N. Patient-level cross-validation (primary evaluation) ─────────────
+    print("\n[Step 3] Running patient-level cross-validation ...")
+    cv_results = cross_validate_pipeline(imputed_df)
+
     # ── 3. Keep Hospital B imputed data for patient-level analysis ──────────
     # train_pipeline will also split internally, but we need the full
     # Hospital B DataFrame (with patient_id, ICULOS, SepsisLabel) to pass
@@ -251,6 +274,7 @@ def run() -> None:
     best_params = pipeline_output["best_params"]
     dashboard_json = _build_dashboard_json(
         xgb_results, logistic_results, xgb_model, best_params, feature_names, y_val,
+        cv_results,
     )
 
     # Add LSTM metrics and ROC curve to dashboard JSON

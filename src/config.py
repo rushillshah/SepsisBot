@@ -46,6 +46,26 @@ XGBOOST_PARAM_GRID = {
     "colsample_bytree": [0.7, 0.8],
 }
 
+# ── Features to Exclude (site-specific confounders) ────────────────────────
+
+EXCLUDED_FEATURES = ["Unit1", "Unit2", "HospAdmTime"]
+
+# ── Improved Model Hyperparameters ─────────────────────────────────────────
+
+XGBOOST_PARAM_GRID_V2 = {
+    "max_depth": [3, 4, 5],
+    "learning_rate": [0.01, 0.05, 0.1],
+    "n_estimators": [100, 300, 500],
+    "min_child_weight": [5, 10, 20],
+    "gamma": [0.1, 0.5, 1.0],
+    "reg_alpha": [0.1, 1.0],
+    "reg_lambda": [1.0, 5.0],
+    "subsample": [0.7, 0.8],
+    "colsample_bytree": [0.7, 0.8],
+}
+
+CV_N_ITER = 30
+
 CV_FOLDS = 5
 RANDOM_STATE = 42
 TARGET_AUROC = 0.80

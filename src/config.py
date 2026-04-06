@@ -64,8 +64,8 @@ XGBOOST_PARAM_GRID_V2 = {
     "colsample_bytree": [0.7, 0.8],
 }
 
-CV_N_ITER = 30
+CV_N_ITER = 15
 
-CV_FOLDS = 5
+CV_FOLDS = 3
 RANDOM_STATE = 42
 TARGET_AUROC = 0.80

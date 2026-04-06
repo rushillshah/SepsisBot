@@ -10,16 +10,23 @@ A proof-of-concept predictive model for **early sepsis detection** from ICU pati
 
 The core question: given a patient's hourly vitals and periodic lab draws, can we predict sepsis **up to 6 hours before clinical onset**?
 
-## Current Status (as of 2026-04-06)
+## Current Status (as of 2026-04-07)
 
-- **XGBoost CV AUROC: 0.806** (3-fold patient-level stratified CV on both hospitals)
-- **LR CV AUROC: 0.778**
+- **XGBoost CV AUROC: 0.806** (3-fold patient-level stratified CV on both hospitals) — but this is HOUR-LEVEL
+- **True patient-level: Sensitivity 95.7%, Specificity 56.0%, Precision 14.6%**
 - Old cross-hospital holdout approach has been REMOVED — CV is the only evaluation
 - LSTM model built but not yet trained on GPU (use `src/train_lstm.py`)
-- Model .pkl files saved to `data/processed/models/` after pipeline run (calibrated XGBoost + LR + scaler)
-- Feature importance: IV, XGBoost Gain %, SHAP values all computed (see `data/processed/feature_analysis/`)
-- Dashboard live at localhost:8501 with 7 pages — shows CV data only
-- Clinical scoring features added: SIRS, qSOFA, Shock Index, MEWS, Lactate/MAP ratio
+- Model .pkl files saved to `data/processed/models/` (calibrated XGBoost + LR + scaler)
+- Feature importance: IV, XGBoost Gain %, SHAP values computed (see `data/processed/feature_analysis/`)
+- Dashboard live at localhost:8501 — **WARNING: confusion matrix and some metrics are wrong (see Known Issues)**
+
+### KNOWN ISSUES (from Nachiket's review 2026-04-07)
+1. **Dashboard confusion matrix is fabricated** — estimated from hour-level rates applied to patient counts, NOT from actual predictions
+2. **Metrics labeled "patient-level" are actually hour-level** — AUROC 0.806, sensitivity 73.9% etc are per-hour, not per-patient
+3. **Median imputation is harmful** — labs with >50% missingness filled with population median; XGBoost handles NaN natively
+4. **ICULOS still a top feature** — possible site confounder despite removing Unit1/Unit2
+5. **Threshold miscalibrated** — XGBoost probabilities max at ~0.27, optimal threshold ~0.025, very trigger-happy
+6. See `todos/todos.md` for full fix list
 
 ### What's Been Done
 1. Full data pipeline (load 40K PSV files, impute, feature engineer)

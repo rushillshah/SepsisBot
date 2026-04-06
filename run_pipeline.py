@@ -3,9 +3,12 @@
 Steps:
     1. Load raw PSV data from both hospitals and save as parquet.
     2. Impute missing values (missingness flags, time-since-measured, ffill).
-    3. Train logistic regression baseline and tuned XGBoost on Hospital A.
-    4. Evaluate both models on Hospital B (validation set).
-    5. Save metrics JSON, ROC curve, and feature importance plot for the
+    3. Patient-level cross-validation (primary evaluation).
+    4. Split imputed data by hospital.
+    5. Train logistic regression baseline and tuned XGBoost on Hospital A.
+    6. Evaluate both models on Hospital B (validation set).
+    7. Feature importance analysis (IV, SHAP, gain ranking).
+    8. Save metrics JSON, ROC curve, and feature importance plot for the
        Streamlit dashboard.
 """
 
@@ -23,7 +26,13 @@ from src.evaluate import (
     plot_feature_importance,
     plot_roc_curves,
 )
-from src.features import get_feature_names
+from src.feature_importance import (
+    compute_information_value,
+    compute_gain_importance,
+    compute_shap_values,
+    combined_feature_ranking,
+)
+from src.features import build_feature_matrix, get_feature_names
 from src.imputation import impute
 from src.train import split_by_hospital, train_pipeline
 from src.train_cv import cross_validate_pipeline
@@ -201,7 +210,7 @@ def run() -> None:
     """Execute the full sepsis prediction pipeline."""
 
     # ── 1. Load raw data ────────────────────────────────────────────────────
-    print("\n[Step 1/7] Loading raw data ...")
+    print("\n[Step 1/8] Loading raw data ...")
     try:
         raw_df = load_processed("raw_data")
         print(f"  Loaded cached raw data: {len(raw_df):,} rows")
@@ -210,32 +219,32 @@ def run() -> None:
         save_processed(raw_df, "raw_data")
 
     # ── 2. Impute missing values ────────────────────────────────────────────
-    print("\n[Step 2/7] Running imputation ...")
+    print("\n[Step 2/8] Running imputation ...")
     imputed_df = impute(raw_df)
     save_processed(imputed_df, "imputed_data")
 
-    # ── N. Patient-level cross-validation (primary evaluation) ─────────────
-    print("\n[Step 3] Running patient-level cross-validation ...")
+    # ── 3. Patient-level cross-validation (primary evaluation) ──────────────
+    print("\n[Step 3/8] Running patient-level cross-validation ...")
     cv_results = cross_validate_pipeline(imputed_df)
 
-    # ── 3. Keep Hospital B imputed data for patient-level analysis ──────────
+    # ── 4. Keep Hospital B imputed data for patient-level analysis ──────────
     # train_pipeline will also split internally, but we need the full
     # Hospital B DataFrame (with patient_id, ICULOS, SepsisLabel) to pass
     # into evaluate_model for patient-level analysis.
-    print("\n[Step 3/7] Splitting imputed data by hospital ...")
+    print("\n[Step 4/8] Splitting imputed data by hospital ...")
     _, df_b_imputed = split_by_hospital(imputed_df)
     print(f"  Hospital B (validation): {len(df_b_imputed):,} rows")
 
-    # ── 4. Train models ────────────────────────────────────────────────────
-    print("\n[Step 4/7] Training models ...")
+    # ── 5. Train models ────────────────────────────────────────────────────
+    print("\n[Step 5/8] Training models ...")
     pipeline_output = train_pipeline(imputed_df)
     xgb_model = pipeline_output["xgboost"]
     logistic_model = pipeline_output["logistic"]
     X_val = pipeline_output["X_val"]
     y_val = pipeline_output["y_val"]
 
-    # ── 5. Evaluate models on Hospital B ──────────────────────────────────────
-    print("\n[Step 5/7] Evaluating models on Hospital B ...")
+    # ── 6. Evaluate models on Hospital B ──────────────────────────────────────
+    print("\n[Step 6/8] Evaluating models on Hospital B ...")
     logistic_results = evaluate_model(
         logistic_model, X_val, y_val, "Logistic Regression",
     )
@@ -243,8 +252,42 @@ def run() -> None:
         xgb_model, X_val, y_val, "XGBoost", df_with_ids=df_b_imputed,
     )
 
-    # ── 6. Save evaluation artifacts ────────────────────────────────────────
-    print("\n[Step 6/7] Saving evaluation artifacts ...")
+    # ── 7. Feature Importance Analysis ────────────────────────────────────
+    print("\n[Step 7/8] Running feature importance analysis ...")
+
+    # We need an uncalibrated XGBoost for SHAP (TreeExplainer needs raw XGBoost)
+    # Use the XGBoost from the cross-hospital pipeline
+    xgb_model_raw = pipeline_output["xgboost"]
+
+    # Build feature matrix on full imputed data for IV
+    X_full, y_full = build_feature_matrix(imputed_df)
+    fi_feature_names = list(X_full.columns)
+
+    # IV
+    print("  Computing Information Value ...")
+    iv_df = compute_information_value(X_full, y_full)
+
+    # Gain %
+    print("  Computing XGBoost Gain % ...")
+    gain_df = compute_gain_importance(xgb_model_raw, fi_feature_names)
+
+    # SHAP (sample 10K rows for speed)
+    print("  Computing SHAP values (10K sample) ...")
+    sample_idx = np.random.RandomState(42).choice(
+        len(X_full), size=min(10_000, len(X_full)), replace=False,
+    )
+    X_sample = X_full.iloc[sample_idx]
+    shap_df = compute_shap_values(
+        xgb_model_raw, X_sample, fi_feature_names, save_dir=str(DATA_PROCESSED),
+    )
+
+    # Combined ranking
+    print("  Building combined ranking ...")
+    ranking_df = combined_feature_ranking(iv_df, gain_df, shap_df, top_n=30)
+    print(ranking_df.head(15).to_string(index=False))
+
+    # ── 8. Save evaluation artifacts ────────────────────────────────────────
+    print("\n[Step 8/8] Saving evaluation artifacts ...")
     DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
     # Feature names from the validation feature matrix
@@ -256,6 +299,13 @@ def run() -> None:
         xgb_results, logistic_results, xgb_model, best_params, feature_names, y_val,
         cv_results,
     )
+
+    # Feature importance
+    dashboard_json["feature_ranking"] = ranking_df.head(30).to_dict(orient="records")
+    dashboard_json["iv_top20"] = iv_df.head(20).to_dict(orient="records")
+
+    # Overfit table
+    dashboard_json["cv_overfit_table"] = cv_results.get("overfit_table", [])
 
     metrics_path = DATA_PROCESSED / "model_metrics.json"
     with open(metrics_path, "w") as f:

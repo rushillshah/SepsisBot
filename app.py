@@ -718,6 +718,43 @@ def page_model_performance():
             audience=audience,
         )
 
+        # ── Overfit Check ────────────────────────────────────────────────
+        overfit_table = metrics.get("cv_overfit_table")
+        if overfit_table:
+            st.markdown("### Overfit Check (Train vs Validation AUROC)")
+            ot_df = pd.DataFrame(overfit_table)
+            # Format for display
+            display_df = pd.DataFrame({
+                "Fold": ot_df["fold"],
+                "XGB Train": ot_df["xgb_train_auroc"].map(lambda x: f"{x:.4f}"),
+                "XGB Val": ot_df["xgb_val_auroc"].map(lambda x: f"{x:.4f}"),
+                "XGB Gap": ot_df["xgb_gap"].map(lambda x: f"{x:.4f}"),
+                "LR Train": ot_df["lr_train_auroc"].map(lambda x: f"{x:.4f}"),
+                "LR Val": ot_df["lr_val_auroc"].map(lambda x: f"{x:.4f}"),
+                "LR Gap": ot_df["lr_gap"].map(lambda x: f"{x:.4f}"),
+            })
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+            avg_xgb_gap = ot_df["xgb_gap"].mean()
+            avg_lr_gap = ot_df["lr_gap"].mean()
+
+            explain(
+                clinical=(
+                    f"This table compares how well the model performs on data it <b>trained on</b> vs "
+                    f"data it <b>never saw</b>. A large gap means the model memorized training data "
+                    f"instead of learning general patterns. "
+                    f"<br><br>Average gap: XGBoost {avg_xgb_gap:.3f}, LR {avg_lr_gap:.3f}. "
+                    f"{'Gaps are reasonable — the model generalizes well.' if avg_xgb_gap < 0.15 else 'Gaps are large — some overfitting remains.'}"
+                ),
+                technical=(
+                    f"Per-fold train vs val AUROC. XGBoost avg gap: {avg_xgb_gap:.4f}, "
+                    f"LR avg gap: {avg_lr_gap:.4f}. "
+                    f"Gaps < 0.10 indicate good generalization. "
+                    f"Gaps > 0.15 suggest overfitting despite regularization."
+                ),
+                audience=audience,
+            )
+
         st.markdown("---")
         st.markdown("### Cross-Hospital Holdout (Stress Test)")
         st.caption("Train on Hospital A only, validate on Hospital B — tests worst-case site generalization")
@@ -1203,6 +1240,43 @@ def page_feature_importance():
         ),
         audience=audience,
     )
+
+    # ── Combined Feature Ranking ─────────────────────────────────────
+    feature_ranking = metrics.get("feature_ranking")
+    if feature_ranking:
+        st.markdown("### Feature Ranking — Three Methods Compared")
+        rank_df = pd.DataFrame(feature_ranking)
+        display_cols = ["feature", "iv", "gain_pct", "mean_abs_shap", "average_rank"]
+        available_cols = [c for c in display_cols if c in rank_df.columns]
+        if available_cols:
+            st.dataframe(rank_df[available_cols].head(20), use_container_width=True, hide_index=True)
+
+    # ── SHAP Plots ───────────────────────────────────────────────────
+    shap_summary_path = DATA_PROCESSED / "shap_summary.png"
+    shap_bar_path = DATA_PROCESSED / "shap_bar.png"
+
+    if shap_summary_path.exists():
+        st.markdown("### SHAP Summary Plot (Beeswarm)")
+        st.image(str(shap_summary_path), use_container_width=True)
+        explain(
+            clinical=(
+                "Each dot is one hourly observation. The horizontal position shows how much that "
+                "feature pushed the prediction toward sepsis (right) or away from it (left). "
+                "The color shows whether the feature value was high (red) or low (blue). "
+                "Features at the top have the most influence overall."
+            ),
+            technical=(
+                "SHAP TreeExplainer values on 10K sampled observations from the XGBoost model. "
+                "Each dot = one sample's SHAP value for that feature. "
+                "Color = feature value (red=high, blue=low). "
+                "X-axis = SHAP value (impact on model output in log-odds space)."
+            ),
+            audience=audience,
+        )
+
+    if shap_bar_path.exists():
+        st.markdown("### SHAP Feature Importance (Mean |SHAP|)")
+        st.image(str(shap_bar_path), use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

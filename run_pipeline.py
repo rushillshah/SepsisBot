@@ -55,6 +55,12 @@ def _build_dashboard_json(cv_results: dict, ranking_df, iv_df) -> dict:
         "cv_lr_gini": 2 * avg_lr["auroc"]["mean"] - 1,
         # Overfit table
         "cv_overfit_table": cv_results.get("overfit_table", []),
+        # REAL patient-level confusion matrix (summed across folds)
+        "confusion_matrix": cv_results.get("total_patient_cm", {}),
+        # Patient-level metrics (averaged across folds)
+        "patient_sensitivity": cv_results.get("avg_patient_metrics", {}).get("sensitivity", {}).get("mean", 0),
+        "patient_specificity": cv_results.get("avg_patient_metrics", {}).get("specificity", {}).get("mean", 0),
+        "patient_precision": cv_results.get("avg_patient_metrics", {}).get("precision", {}).get("mean", 0),
         # Feature importance
         "feature_ranking": ranking_df.head(30).to_dict(orient="records") if ranking_df is not None else [],
         "iv_top20": iv_df.head(20).to_dict(orient="records") if iv_df is not None else [],

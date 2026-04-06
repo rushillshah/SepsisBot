@@ -656,8 +656,8 @@ def page_model_performance():
     # ── Cross-Validation Results ─────────────────────────────────────
     cv_xgb_auroc = metrics.get("cv_xgb_auroc")
     if cv_xgb_auroc is not None:
-        st.markdown("### Patient-Level Cross-Validation Results")
-        st.caption("3-fold stratified CV on both hospitals — no patient in both train and val")
+        st.markdown("### Cross-Validation Results (Hour-Level Metrics)")
+        st.caption("3-fold stratified CV on both hospitals — metrics computed per hourly observation")
 
         cv_table = pd.DataFrame({
             "Metric": ["AUROC", "Gini", "Sensitivity (Recall)", "Specificity", "Precision", "F1", "PR-AUC"],
@@ -895,8 +895,34 @@ def page_model_performance():
         audience=audience,
     )
 
-    # Confusion matrix
-    st.markdown("### What Happens in Practice")
+    # Patient-level metrics (the ones clinicians care about)
+    p_sens = metrics.get("patient_sensitivity")
+    p_spec = metrics.get("patient_specificity")
+    p_prec = metrics.get("patient_precision")
+    if p_sens is not None:
+        st.markdown("### Patient-Level Metrics (What Clinicians Care About)")
+        st.caption("Did the model alert on this patient at any point? Yes/No — averaged across CV folds")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Patient Sensitivity", f"{p_sens:.1%}", help="% of sepsis patients the model flagged at least once")
+        c2.metric("Patient Specificity", f"{p_spec:.1%}", help="% of non-sepsis patients correctly left alone")
+        c3.metric("Patient Precision", f"{p_prec:.1%}", help="Of patients flagged, % that actually had sepsis")
+
+        explain(
+            clinical=(
+                f"At the patient level: the model catches <b>{p_sens:.0%} of sepsis patients</b> "
+                f"but also false-alarms on <b>{1-p_spec:.0%} of non-sepsis patients</b>. "
+                f"Of everyone flagged, <b>{p_prec:.0%}</b> actually had sepsis."
+            ),
+            technical=(
+                f"Patient-level: sens={p_sens:.3f}, spec={p_spec:.3f}, prec={p_prec:.3f}. "
+                f"Computed by taking max(prob) per patient across all their hours and comparing to threshold. "
+                f"Averaged across CV folds. These differ significantly from the hour-level metrics above."
+            ),
+            audience=audience,
+        )
+
+    # Confusion matrix (real, computed from actual predictions)
+    st.markdown("### What Happens in Practice (Patient-Level Confusion Matrix)")
 
     cm = metrics.get("confusion_matrix")
     if cm:

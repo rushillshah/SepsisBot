@@ -76,16 +76,20 @@ def forward_fill_per_patient(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fill_remaining_nans(df: pd.DataFrame) -> pd.DataFrame:
-    """Fill any NaN values remaining after forward-fill with column medians.
+    """Fill NaN values remaining after forward-fill with zero.
 
     Forward-fill leaves NaN for hours before a patient's first measurement.
-    These are filled with the global column median so downstream models
-    (e.g. LogisticRegression) that cannot handle NaN still work.
+    These are filled with 0 (not median — median imputation invents data
+    for high-missingness columns like Bilirubin_direct at 96% missing).
+
+    The missingness flags ({col}_measured=0, {col}_hours_since=-1) already
+    tell the model these values are unknown. Zero is a neutral sentinel
+    that works for both XGBoost and LogisticRegression after scaling.
     """
     result = df.copy()
     for col in ALL_FEATURE_COLS:
         if result[col].isna().any():
-            result[col] = result[col].fillna(result[col].median())
+            result[col] = result[col].fillna(0.0)
     return result
 
 

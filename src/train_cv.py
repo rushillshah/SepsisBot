@@ -177,10 +177,37 @@ def _train_fold(
     xgb_train_prob = calibrated_xgb.predict_proba(X_train)[:, 1]
     xgb_train_auroc = roc_auc_score(y_train, xgb_train_prob)
 
+    # ── Patient-level metrics (real, not fabricated) ─────────────────────────
+    val_pids = df_val["patient_id"].values
+    val_labels = df_val[LABEL_COL].values
+
+    def _patient_level_cm(pids, labels, probs, threshold):
+        """Compute real patient-level confusion matrix."""
+        import pandas as _pd
+        work = _pd.DataFrame({"pid": pids, "label": labels, "prob": probs})
+        patient_actual = work.groupby("pid")["label"].max()  # 1 if ever sepsis
+        patient_predicted = work.groupby("pid")["prob"].max() >= threshold  # 1 if ever alerted
+        tp = int(((patient_actual == 1) & (patient_predicted == True)).sum())
+        fn = int(((patient_actual == 1) & (patient_predicted == False)).sum())
+        fp = int(((patient_actual == 0) & (patient_predicted == True)).sum())
+        tn = int(((patient_actual == 0) & (patient_predicted == False)).sum())
+        n_total = len(patient_actual)
+        n_sepsis = int((patient_actual == 1).sum())
+        sens = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        return {
+            "tp": tp, "fn": fn, "fp": fp, "tn": tn,
+            "total_patients": n_total, "actual_sepsis": n_sepsis,
+            "sensitivity": sens, "specificity": spec, "precision": prec,
+        }
+
+    xgb_patient_cm = _patient_level_cm(val_pids, val_labels, xgb_prob, xgb_threshold)
+
     print(
         f"  Fold {fold_num} | "
-        f"LR: train={lr_train_auroc:.4f} val={lr_metrics['auroc']:.4f}  "
-        f"XGB: train={xgb_train_auroc:.4f} val={xgb_metrics['auroc']:.4f}"
+        f"Hour: XGB AUROC={xgb_metrics['auroc']:.4f}  "
+        f"Patient: sens={xgb_patient_cm['sensitivity']:.3f} spec={xgb_patient_cm['specificity']:.3f} prec={xgb_patient_cm['precision']:.3f}"
     )
 
     return {
@@ -194,6 +221,7 @@ def _train_fold(
         "lr_prob": lr_prob,
         "lr_train_auroc": float(lr_train_auroc),
         "xgb_train_auroc": float(xgb_train_auroc),
+        "xgb_patient_cm": xgb_patient_cm,
     }
 
 
@@ -244,13 +272,27 @@ def cross_validate_pipeline(df: pd.DataFrame) -> dict:
             "xgb_gap": r["xgb_train_auroc"] - r["xgb_metrics"]["auroc"],
         })
 
-    _print_summary(avg_xgb_metrics, avg_lr_metrics, overfit_table)
+    # Average patient-level metrics across folds
+    avg_patient_cm = {}
+    for key in ["sensitivity", "specificity", "precision"]:
+        vals = [r["xgb_patient_cm"][key] for r in fold_results]
+        avg_patient_cm[key] = {"mean": float(np.mean(vals)), "std": float(np.std(vals))}
+
+    # Sum TP/FN/FP/TN across folds for aggregate confusion matrix
+    total_cm = {"tp": 0, "fn": 0, "fp": 0, "tn": 0, "total_patients": 0, "actual_sepsis": 0}
+    for r in fold_results:
+        for k in total_cm:
+            total_cm[k] += r["xgb_patient_cm"][k]
+
+    _print_summary(avg_xgb_metrics, avg_lr_metrics, overfit_table, avg_patient_cm)
 
     return {
         "avg_xgb_metrics": avg_xgb_metrics,
         "avg_lr_metrics": avg_lr_metrics,
         "fold_results": fold_results,
         "overfit_table": overfit_table,
+        "avg_patient_metrics": avg_patient_cm,
+        "total_patient_cm": total_cm,
     }
 
 
@@ -281,7 +323,7 @@ def _average_metrics(metrics_list: list[dict]) -> dict:
     return averaged
 
 
-def _print_summary(avg_xgb: dict, avg_lr: dict, overfit_table: list[dict]) -> None:
+def _print_summary(avg_xgb: dict, avg_lr: dict, overfit_table: list[dict], avg_patient: dict | None = None) -> None:
     """Print the cross-validation summary table to stdout."""
     width = 60
     print("\n" + "=" * width)
@@ -311,3 +353,9 @@ def _print_summary(avg_xgb: dict, avg_lr: dict, overfit_table: list[dict]) -> No
     print(f"  {'Fold':<6s} {'LR Train':>10s} {'LR Val':>10s} {'LR Gap':>10s} {'XGB Train':>10s} {'XGB Val':>10s} {'XGB Gap':>10s}")
     for row in overfit_table:
         print(f"  {row['fold']:<6d} {row['lr_train_auroc']:>10.4f} {row['lr_val_auroc']:>10.4f} {row['lr_gap']:>10.4f} {row['xgb_train_auroc']:>10.4f} {row['xgb_val_auroc']:>10.4f} {row['xgb_gap']:>10.4f}")
+
+    if avg_patient is not None:
+        print(f"\n  PATIENT-LEVEL METRICS (XGBoost, averaged across folds)")
+        print(f"  Sensitivity: {avg_patient['sensitivity']['mean']:.3f} +/- {avg_patient['sensitivity']['std']:.3f}")
+        print(f"  Specificity: {avg_patient['specificity']['mean']:.3f} +/- {avg_patient['specificity']['std']:.3f}")
+        print(f"  Precision:   {avg_patient['precision']['mean']:.3f} +/- {avg_patient['precision']['std']:.3f}")

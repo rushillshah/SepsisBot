@@ -266,43 +266,43 @@ def page_executive_summary():
         )
 
     if metrics is not None:
-        st.markdown("### Current Model Performance")
+        st.markdown("### Current Model Performance (Patient-Level CV)")
 
         c1, c2, c3 = st.columns(3)
-        auroc = metrics["auroc"]
-        sens = metrics["sensitivity"]
-        spec = metrics["specificity"]
+        auroc = metrics.get("cv_xgb_auroc", metrics.get("auroc", 0))
+        sens = metrics.get("cv_xgb_sensitivity", metrics.get("sensitivity", 0))
+        spec = metrics.get("cv_xgb_specificity", metrics.get("specificity", 0))
+        auroc_std = metrics.get("cv_xgb_auroc_std", 0)
 
         c1.metric(
-            "Discriminative Ability (AUROC)",
-            f"{auroc:.2f}",
-            delta="Below 0.80 target",
-            delta_color="inverse",
+            "AUROC (XGBoost CV)",
+            f"{auroc:.3f} +/- {auroc_std:.3f}",
+            delta="Above 0.80 target" if auroc >= 0.80 else "Below 0.80 target",
+            delta_color="normal" if auroc >= 0.80 else "inverse",
         )
         c2.metric(
             "Sepsis Detection Rate",
             f"{sens:.0%}",
-            help="Of patients who actually had sepsis, how many did the model flag?",
+            help="Of patients who actually had sepsis, how many did the model flag? (3-fold CV average)",
         )
         c3.metric(
-            "False Alarm Rate",
-            f"{1 - spec:.0%}",
-            help="Of patients who did NOT have sepsis, how many were incorrectly flagged?",
+            "Specificity",
+            f"{spec:.0%}",
+            help="Of patients who did NOT have sepsis, how many were correctly left alone?",
         )
 
         explain(
             clinical=(
-                "<b>In plain English:</b> The model correctly identifies about <b>56% of sepsis cases</b>, "
-                "but it also raises false alarms on <b>37% of non-sepsis patients</b>. "
-                "This is a first iteration — not yet reliable enough for clinical use, but it demonstrates "
-                "the concept works and shows which data points matter most."
+                f"<b>In plain English:</b> The model correctly identifies about <b>{sens:.0%} of sepsis cases</b> "
+                f"with an overall discriminative ability (AUROC) of <b>{auroc:.2f}</b>. "
+                f"These results come from 3-fold patient-level cross-validation on both hospitals combined — "
+                f"no patient appears in both training and testing."
             ),
             technical=(
-                f"<b>Validation AUROC: {auroc:.3f}</b> (Hospital B holdout). "
-                "Severe cross-hospital degradation from 0.993 CV AUROC on Hospital A — "
-                "classic distribution shift. The model overfit to Hospital A's measurement patterns "
-                "(Unit2, ICULOS dominate feature importance). "
-                "Key fix: train with stratified CV on both hospitals, add stronger regularization."
+                f"<b>CV AUROC: {auroc:.3f} +/- {auroc_std:.3f}</b> (3-fold patient-level stratified CV). "
+                f"Site confounders (Unit1, Unit2, HospAdmTime) removed. "
+                f"XGBoost with V2 regularization, Platt calibration, StandardScaler. "
+                f"Clinical scoring features (SIRS, qSOFA, Shock Index, MEWS, Lactate/MAP) included."
             ),
             audience=audience,
         )
@@ -645,15 +645,6 @@ def page_model_performance():
         no_data_warning()
         return
 
-    auroc = metrics["auroc"]
-    pr_auc = metrics["pr_auc"]
-    sens = metrics["sensitivity"]
-    spec = metrics["specificity"]
-    f1 = metrics["f1"]
-    precision = metrics.get("precision", 0)
-    recall = metrics.get("recall", sens)
-    gini = metrics.get("gini", 2 * auroc - 1)
-
     def _fmt(val):
         if val is None or val == "N/A":
             return "N/A"
@@ -662,11 +653,11 @@ def page_model_performance():
         except (ValueError, TypeError):
             return str(val)
 
-    # ── Cross-Validation Results (Primary) ───────────────────────────
+    # ── Cross-Validation Results ─────────────────────────────────────
     cv_xgb_auroc = metrics.get("cv_xgb_auroc")
     if cv_xgb_auroc is not None:
-        st.markdown("### Patient-Level Cross-Validation (Primary Results)")
-        st.caption("5-fold stratified CV on both hospitals — no patient in both train and val")
+        st.markdown("### Patient-Level Cross-Validation Results")
+        st.caption("3-fold stratified CV on both hospitals — no patient in both train and val")
 
         cv_table = pd.DataFrame({
             "Metric": ["AUROC", "Gini", "Sensitivity (Recall)", "Specificity", "Precision", "F1", "PR-AUC"],
@@ -755,198 +746,154 @@ def page_model_performance():
                 audience=audience,
             )
 
-        st.markdown("---")
-        st.markdown("### Cross-Hospital Holdout (Stress Test)")
-        st.caption("Train on Hospital A only, validate on Hospital B — tests worst-case site generalization")
+    # ── Full CV Metrics Table ────────────────────────────────────────────────
+    if cv_xgb_auroc is None:
+        st.info("No CV data available. Run `python run_pipeline.py` to generate.")
+        return
 
-    # ── Full Metrics Comparison Table ────────────────────────────────────────
-    st.markdown("### Full Metrics — Both Models on Hospital B (Unseen Data)")
+    st.markdown("### Full CV Metrics — XGBoost vs Logistic Regression")
 
-    metric_rows = [
-        "AUC (Area Under ROC Curve)",
-        "ROC — Sensitivity (Recall / TPR)",
-        "ROC — Specificity (TNR)",
-        "Precision (PPV)",
-        "Recall (Sensitivity)",
-        "F1 Score",
-        "Gini Coefficient",
-        "PR-AUC (Precision-Recall AUC)",
-        "Optimal Threshold",
+    cv_metric_rows = ["AUROC", "Sensitivity (Recall)", "Specificity", "Precision", "F1", "Gini", "PR-AUC"]
+    xgb_cv = [
+        metrics.get("cv_xgb_auroc"), metrics.get("cv_xgb_sensitivity"),
+        metrics.get("cv_xgb_specificity"), metrics.get("cv_xgb_precision"),
+        metrics.get("cv_xgb_f1"), metrics.get("cv_xgb_gini"), metrics.get("cv_xgb_pr_auc"),
     ]
-    xgb_vals = [auroc, sens, spec, precision, recall, f1, gini, pr_auc, metrics.get("optimal_threshold")]
-    lr_vals = [metrics.get(k) for k in ["lr_auroc", "lr_sensitivity", "lr_specificity", "lr_precision", "lr_recall", "lr_f1", "lr_gini", "lr_pr_auc", "lr_optimal_threshold"]]
-    lstm_vals = [metrics.get(k) for k in ["lstm_auroc", "lstm_sensitivity", "lstm_specificity", "lstm_precision", "lstm_recall", "lstm_f1", "lstm_gini", "lstm_pr_auc", "lstm_optimal_threshold"]]
-    ideal_vals = ["1.0000"] * 8 + ["~0.50"]
+    lr_cv = [
+        metrics.get("cv_lr_auroc"), metrics.get("cv_lr_sensitivity"),
+        metrics.get("cv_lr_specificity"), metrics.get("cv_lr_precision"),
+        metrics.get("cv_lr_f1"), metrics.get("cv_lr_gini"), metrics.get("cv_lr_pr_auc"),
+    ]
 
-    table_data = {
-        "Metric": metric_rows,
-        "LSTM (seq=12)": [_fmt(v) for v in lstm_vals],
-        "XGBoost": [_fmt(v) for v in xgb_vals],
-        "Logistic Regression": [_fmt(v) for v in lr_vals],
-        "Ideal": ideal_vals,
-    }
-    # Only show LSTM column if we have LSTM data
-    if all(v is None for v in lstm_vals):
-        del table_data["LSTM (seq=12)"]
-
-    metrics_table = pd.DataFrame(table_data)
-    st.dataframe(metrics_table, use_container_width=True, hide_index=True)
+    cv_table = pd.DataFrame({
+        "Metric": cv_metric_rows,
+        "XGBoost (CV)": [_fmt(v) for v in xgb_cv],
+        "Logistic Reg (CV)": [_fmt(v) for v in lr_cv],
+        "Ideal": ["1.0000"] * 7,
+    })
+    st.dataframe(cv_table, use_container_width=True, hide_index=True)
 
     explain(
         clinical=(
             "<b>Reading this table:</b><br>"
-            "- <b>AUC / AUROC</b> — Overall ability to distinguish sepsis from non-sepsis (1.0 = perfect, 0.5 = coin flip)<br>"
-            "- <b>Sensitivity / Recall</b> — Same thing: of all actual sepsis cases, what % did we catch?<br>"
+            "- <b>AUROC</b> — Overall ability to distinguish sepsis from non-sepsis (1.0 = perfect, 0.5 = coin flip)<br>"
+            "- <b>Sensitivity / Recall</b> — Of all actual sepsis cases, what % did we catch?<br>"
             "- <b>Specificity</b> — Of all non-sepsis patients, what % did we correctly leave alone?<br>"
-            "- <b>Precision</b> — Of all patients we flagged as sepsis, what % actually had it? (Low = many false alarms)<br>"
+            "- <b>Precision</b> — Of all patients we flagged as sepsis, what % actually had it?<br>"
             "- <b>F1 Score</b> — Balance between precision and recall (higher is better)<br>"
-            "- <b>Gini</b> — Another way to express AUC: Gini = 2 x AUC - 1 (0 = random, 1 = perfect)<br>"
-            "- <b>PR-AUC</b> — Like AUC but focused on the rare sepsis class (more honest with imbalanced data)<br><br>"
-            "Notice that <b>Logistic Regression actually beats XGBoost</b> on most metrics here. "
-            "This tells us the more complex model overfit to the training hospital's patterns."
+            "- <b>Gini</b> — Another way to express AUC: Gini = 2 x AUC - 1<br>"
+            "- <b>PR-AUC</b> — Like AUC but focused on the rare sepsis class"
         ),
         technical=(
-            f"XGBoost AUROC {auroc:.3f} vs LR {metrics.get('lr_auroc', 'N/A')} on Hospital B holdout. "
-            f"Both are poor, but LR generalizing better than XGBoost confirms overfitting. "
-            f"Gini {gini:.3f} (XGB) vs {metrics.get('lr_gini', 'N/A')} (LR). "
-            f"PR-AUC is the most informative metric at 7% prevalence — random baseline ≈ 0.07. "
-            f"XGBoost optimal threshold at {metrics.get('optimal_threshold', 'N/A')} indicates severe "
-            f"probability miscalibration across sites. LR threshold at {metrics.get('lr_optimal_threshold', 'N/A')} "
-            f"is more reasonable."
+            f"3-fold patient-level stratified CV. "
+            f"XGBoost AUROC {_fmt(metrics.get('cv_xgb_auroc'))} vs LR {_fmt(metrics.get('cv_lr_auroc'))}. "
+            f"Platt calibration applied to XGBoost. Features scaled via StandardScaler. "
+            f"Site confounders removed."
         ),
         audience=audience,
     )
 
-    # ── Headline metric cards ────────────────────────────────────────────────
-    st.markdown("### XGBoost At a Glance")
-
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("AUC", f"{auroc:.3f}", help="Area under ROC curve")
-    c2.metric("Gini", f"{gini:.3f}", help="Gini = 2*AUC - 1")
-    c3.metric("Recall", f"{recall:.1%}", help="= Sensitivity = TPR")
-    c4.metric("Precision", f"{precision:.1%}", help="PPV — of flagged patients, % actually sepsis")
-    c5.metric("F1", f"{f1:.3f}", help="Harmonic mean of precision & recall")
-    c6.metric("PR-AUC", f"{pr_auc:.3f}", help="Precision-recall curve area")
-
-    # ── ROC Curve & PR Curve side by side ──────────────────────────────────
-    st.markdown("### ROC Curve & Precision-Recall Curve")
-    roc_col, pr_col = st.tabs(["ROC Curve", "Precision-Recall Curve"])
+    # ── ROC Curve ──────────────────────────────────────────────────────────
+    st.markdown("### ROC Curve (from last CV fold)")
 
     fpr = metrics.get("fpr", [])
     tpr = metrics.get("tpr", [])
     lr_fpr = metrics.get("lr_fpr", [])
     lr_tpr = metrics.get("lr_tpr", [])
 
-    with roc_col:
-        if fpr and tpr:
-            fig = go.Figure()
-            # LSTM curve first (if available) since it should be best
-            lstm_fpr = metrics.get("lstm_fpr", [])
-            lstm_tpr = metrics.get("lstm_tpr", [])
-            if lstm_fpr and lstm_tpr:
-                lstm_auroc = metrics.get("lstm_auroc", 0)
-                lstm_gini_val = metrics.get("lstm_gini", 0)
-                fig.add_trace(go.Scatter(
-                    x=lstm_fpr, y=lstm_tpr,
-                    mode="lines",
-                    name=f"LSTM (AUC = {lstm_auroc:.3f}, Gini = {lstm_gini_val:.3f})",
+    if fpr and tpr:
+        fig = go.Figure()
+        xgb_auroc_val = metrics.get("cv_xgb_auroc", 0)
+        xgb_gini_val = metrics.get("cv_xgb_gini", 0)
+
+        # LSTM curve if available
+        lstm_fpr = metrics.get("lstm_fpr", [])
+        lstm_tpr = metrics.get("lstm_tpr", [])
+        if lstm_fpr and lstm_tpr:
+            lstm_auroc = metrics.get("lstm_auroc", 0)
+            lstm_gini_val_l = metrics.get("lstm_gini", 0)
+            fig.add_trace(go.Scatter(
+                x=lstm_fpr, y=lstm_tpr,
+                mode="lines",
+                name=f"LSTM (AUC = {lstm_auroc:.3f}, Gini = {lstm_gini_val_l:.3f})",
                     line=dict(color="#d62728", width=2.5),
                 ))
+        fig.add_trace(go.Scatter(
+            x=fpr, y=tpr,
+            mode="lines",
+            name=f"XGBoost CV (AUC = {xgb_auroc_val:.3f})",
+            line=dict(color="#1f77b4", width=2.5),
+        ))
+        if lr_fpr and lr_tpr:
+            lr_auroc_val = metrics.get("cv_lr_auroc", 0)
             fig.add_trace(go.Scatter(
-                x=fpr, y=tpr,
+                x=lr_fpr, y=lr_tpr,
                 mode="lines",
-                name=f"XGBoost (AUC = {auroc:.3f}, Gini = {gini:.3f})",
-                line=dict(color="#1f77b4", width=2.5),
+                name=f"Logistic Reg CV (AUC = {lr_auroc_val:.3f})",
+                line=dict(color="#2ca02c", width=2),
             ))
-            if lr_fpr and lr_tpr:
-                fig.add_trace(go.Scatter(
-                    x=lr_fpr, y=lr_tpr,
-                    mode="lines",
-                    name=f"Logistic Regression (AUC = {metrics.get('lr_auroc', 'N/A')})",
-                    line=dict(color="#2ca02c", width=2),
-                ))
-            fig.add_trace(go.Scatter(
-                x=[0, 1], y=[0, 1],
-                mode="lines",
-                name="Random Guess (AUC = 0.500)",
-                line=dict(color="gray", dash="dash", width=1),
-            ))
-            fig.add_shape(
-                type="rect", x0=0, x1=0.2, y0=0.8, y1=1.0,
-                line=dict(color="green", dash="dot"),
-                fillcolor="rgba(0,255,0,0.05)",
-            )
-            fig.add_annotation(
-                x=0.1, y=0.9, text="Clinical<br>Target Zone",
-                showarrow=False, font=dict(size=10, color="green"),
-            )
-            fig.update_layout(
-                xaxis_title="False Positive Rate (false alarms)",
-                yaxis_title="True Positive Rate (sepsis detected)",
-                height=500,
-                legend=dict(x=0.4, y=0.15),
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-    with pr_col:
-        pr_prec = metrics.get("pr_precision", [])
-        pr_rec = metrics.get("pr_recall", [])
-        if pr_prec and pr_rec:
-            fig_pr = go.Figure()
-            fig_pr.add_trace(go.Scatter(
-                x=pr_rec, y=pr_prec,
-                mode="lines",
-                name=f"XGBoost (PR-AUC = {pr_auc:.3f})",
-                line=dict(color="#1f77b4", width=2.5),
-            ))
-            # Random baseline for PR = prevalence
-            fig_pr.add_trace(go.Scatter(
-                x=[0, 1], y=[0.073, 0.073],
-                mode="lines",
-                name="Random Baseline (~7.3% prevalence)",
-                line=dict(color="gray", dash="dash", width=1),
-            ))
-            fig_pr.update_layout(
-                xaxis_title="Recall (sensitivity — sepsis cases caught)",
-                yaxis_title="Precision (% of alerts that are real)",
-                height=500,
-                legend=dict(x=0.4, y=0.95),
-            )
-            st.plotly_chart(fig_pr, use_container_width=True)
-
-            explain(
-                clinical=(
-                    "The <b>Precision-Recall curve</b> is more honest than ROC when sepsis is rare (7%). "
-                    "It shows the tradeoff between catching sepsis cases (recall/x-axis) and the "
-                    "percentage of alerts that are real (precision/y-axis). The dashed line is what "
-                    "you'd get by randomly guessing."
-                ),
-                technical=(
-                    f"PR-AUC {pr_auc:.3f} vs random baseline ~0.073 (prevalence). "
-                    "PR curves are more informative than ROC for imbalanced classification because "
-                    "ROC can look good even when precision is terrible — a high specificity with "
-                    "many false positives gets obscured in FPR but is obvious in precision."
-                ),
-                audience=audience,
-            )
-        else:
-            st.info("Precision-recall curve data not available. Re-run the pipeline to generate.")
-
-        explain(
-            clinical=(
-                "This chart shows the tradeoff between <b>catching sepsis cases</b> (y-axis) and "
-                "<b>raising false alarms</b> (x-axis). The blue curve is our model — the higher and "
-                "more to the left it goes, the better. The dashed gray line is random guessing. "
-                "The green box is where a clinically useful model would live."
-            ),
-            technical=(
-                "ROC curve on Hospital B validation set. The curve hugs the diagonal in the "
-                "mid-range, indicating poor discrimination at moderate thresholds. "
-                "The model has reasonable specificity at low sensitivity or vice versa, but "
-                "cannot achieve both simultaneously — a hallmark of distribution shift."
-            ),
-            audience=audience,
+        fig.add_trace(go.Scatter(
+            x=[0, 1], y=[0, 1],
+            mode="lines",
+            name="Random Guess (AUC = 0.500)",
+            line=dict(color="gray", dash="dash", width=1),
+        ))
+        fig.add_shape(
+            type="rect", x0=0, x1=0.2, y0=0.8, y1=1.0,
+            line=dict(color="green", dash="dot"),
+            fillcolor="rgba(0,255,0,0.05)",
         )
+        fig.add_annotation(
+            x=0.1, y=0.9, text="Clinical<br>Target Zone",
+            showarrow=False, font=dict(size=10, color="green"),
+        )
+        fig.update_layout(
+            xaxis_title="False Positive Rate (false alarms)",
+            yaxis_title="True Positive Rate (sepsis detected)",
+            height=500,
+            legend=dict(x=0.4, y=0.15),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Precision-recall curve data not stored in CV-only pipeline yet
+    pr_prec = metrics.get("pr_precision", [])
+    pr_rec = metrics.get("pr_recall", [])
+    if pr_prec and pr_rec:
+        st.markdown("### Precision-Recall Curve")
+        fig_pr = go.Figure()
+        pr_auc_val = metrics.get("cv_xgb_pr_auc", 0)
+        fig_pr.add_trace(go.Scatter(
+            x=pr_rec, y=pr_prec,
+            mode="lines",
+            name=f"XGBoost (PR-AUC = {pr_auc_val:.3f})",
+            line=dict(color="#1f77b4", width=2.5),
+        ))
+        fig_pr.add_trace(go.Scatter(
+            x=[0, 1], y=[0.073, 0.073],
+            mode="lines",
+            name="Random Baseline (~7.3% prevalence)",
+            line=dict(color="gray", dash="dash", width=1),
+        ))
+        fig_pr.update_layout(
+            xaxis_title="Recall (sensitivity — sepsis cases caught)",
+            yaxis_title="Precision (% of alerts that are real)",
+            height=500,
+            legend=dict(x=0.4, y=0.95),
+        )
+        st.plotly_chart(fig_pr, use_container_width=True)
+
+    explain(
+        clinical=(
+            "The ROC curve shows the tradeoff between <b>catching sepsis cases</b> (y-axis) and "
+            "<b>false alarms</b> (x-axis). The higher and more to the left, the better. "
+            "The green box is where a clinically useful model would live."
+        ),
+        technical=(
+            "ROC curve from the last CV fold. Both XGBoost and LR curves shown. "
+            "The closer the curve hugs the top-left corner, the better the discrimination."
+        ),
+        audience=audience,
+    )
 
     # Confusion matrix equivalent
     st.markdown("### What Happens in Practice")

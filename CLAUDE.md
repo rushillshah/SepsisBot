@@ -12,32 +12,37 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 
 ## Current Status (as of 2026-04-06)
 
-- **XGBoost CV AUROC: 0.812** (5-fold patient-level stratified CV on both hospitals)
-- **LR CV AUROC: 0.777**
-- Cross-hospital holdout AUROC: ~0.65 (stress test — expected to be lower)
+- **XGBoost CV AUROC: 0.806** (3-fold patient-level stratified CV on both hospitals)
+- **LR CV AUROC: 0.778**
+- Old cross-hospital holdout approach has been REMOVED — CV is the only evaluation
 - LSTM model built but not yet trained on GPU (use `src/train_lstm.py`)
-- Model .pkl files saved to `data/processed/models/` after pipeline run
-- Feature importance: IV, XGBoost Gain %, SHAP values all computed
-- Dashboard live at localhost:8501 with 7 pages
+- Model .pkl files saved to `data/processed/models/` after pipeline run (calibrated XGBoost + LR + scaler)
+- Feature importance: IV, XGBoost Gain %, SHAP values all computed (see `data/processed/feature_analysis/`)
+- Dashboard live at localhost:8501 with 7 pages — shows CV data only
+- Clinical scoring features added: SIRS, qSOFA, Shock Index, MEWS, Lactate/MAP ratio
 
 ### What's Been Done
 1. Full data pipeline (load 40K PSV files, impute, feature engineer)
-2. Three models: LR, XGBoost, LSTM
+2. Three models: LR, XGBoost, LSTM (LSTM needs GPU training)
 3. Removed site confounders (Unit1, Unit2, HospAdmTime) — this was the #1 fix
-4. Patient-level stratified 5-fold CV with Platt calibration
-5. Stronger XGBoost regularization (max_depth 3-5, L1/L2 reg)
+4. Patient-level stratified 3-fold CV with Platt calibration
+5. Stronger XGBoost regularization (max_depth 3-5, L1/L2 reg, min_child_weight, gamma)
 6. Feature scaling via StandardScaler
-7. Feature importance analysis (IV, Gain, SHAP)
-8. Overfit checking (train vs val per fold)
-9. Temporal analysis module (early warning timing)
-10. Interactive Streamlit dashboard (dual clinical/technical audience)
-11. Comprehensive model report (`docs/model_report.md`)
+7. Clinical scoring features (SIRS, qSOFA mod, Shock Index, MEWS mod, Lactate/MAP)
+8. Feature importance analysis (IV, Gain, SHAP) — saved to `data/processed/feature_analysis/`
+9. Overfit checking (train vs val per fold)
+10. Temporal analysis module (early warning timing) — `src/temporal_analysis.py`
+11. Interactive Streamlit dashboard (dual clinical/technical audience, dark theme)
+12. Comprehensive model report (`docs/model_report.md`)
+13. Old cross-hospital pipeline removed — was producing 95%+ false positive rate
 
 ### What Still Needs Work
 1. **Run LSTM on GPU** — `train_lstm_pipeline()` in `src/train_lstm.py`, currently disabled in run_pipeline.py
-2. **Early warning timing analysis** — `src/temporal_analysis.py` is built but needs pipeline integration (run after model predictions exist)
-3. **Daily vs hourly scoring** — `daily_max_risk()` in temporal_analysis.py aggregates hourly to daily max scores
-4. **MIMIC-IV integration** — adds 7 missing variables (urine output, procalcitonin, CRP, INR, vasopressors, vent status, albumin)
+2. **ICULOS normalization** — replace raw ICULOS with log + buckets (plan written, not implemented)
+3. **Patient-baseline deviation features** — compare vitals to patient's own first-6h baseline
+4. **Multi-timescale slopes** — 3h/6h/12h rate-of-change (currently only 1h deltas)
+5. **Feature selection** — cut from ~170 to top 30-50 by SHAP to reduce overfit gap
+6. **MIMIC-IV integration** — adds 7 missing variables
 
 ## Data Source
 

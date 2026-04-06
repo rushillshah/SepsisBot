@@ -157,11 +157,11 @@ def _train_fold(
     search.fit(X_train, y_train)
     xgb_best_params: dict = search.best_params_
 
-    # ── Platt scaling calibration on the already-fitted best estimator ────
+    # ── Platt scaling calibration ──────────────────────────────────────────
     calibrated_xgb = CalibratedClassifierCV(
         estimator=search.best_estimator_,
         method="sigmoid",
-        cv="prefit",
+        cv=3,
     )
     calibrated_xgb.fit(X_train, y_train)
 

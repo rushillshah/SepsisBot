@@ -234,15 +234,8 @@ def run() -> None:
     X_val = pipeline_output["X_val"]
     y_val = pipeline_output["y_val"]
 
-    # ── 5. Train LSTM ─────────────────────────────────────────────────────────
-    print("\n[Step 5/9] Training LSTM sequence model ...")
-    lstm_output = train_lstm_pipeline(imputed_df, seq_length=12)
-    lstm_model = lstm_output["model"]
-    X_val_lstm = lstm_output["X_val"]
-    y_val_lstm = lstm_output["y_val"]
-
-    # ── 6. Evaluate all models ─────────────────────────────────────────────
-    print("\n[Step 6/9] Evaluating models on Hospital B ...")
+    # ── 5. Evaluate models on Hospital B ──────────────────────────────────────
+    print("\n[Step 5/7] Evaluating models on Hospital B ...")
     logistic_results = evaluate_model(
         logistic_model, X_val, y_val, "Logistic Regression",
     )
@@ -250,21 +243,8 @@ def run() -> None:
         xgb_model, X_val, y_val, "XGBoost", df_with_ids=df_b_imputed,
     )
 
-    # LSTM evaluation (manual since it's not a sklearn model)
-    lstm_y_prob = predict_lstm(lstm_model, X_val_lstm)
-    from src.evaluate import compute_metrics, find_optimal_threshold, print_evaluation_report
-    lstm_threshold = find_optimal_threshold(y_val_lstm, lstm_y_prob)
-    lstm_metrics = compute_metrics(y_val_lstm, lstm_y_prob, threshold=lstm_threshold)
-    print_evaluation_report(lstm_metrics, "LSTM (seq=12)")
-    print(f"  Optimal threshold (Youden's J): {lstm_threshold:.4f}")
-    lstm_results = {
-        "metrics": lstm_metrics,
-        "optimal_threshold": lstm_threshold,
-        "y_prob": lstm_y_prob,
-    }
-
-    # ── 7. Save evaluation artifacts ────────────────────────────────────────
-    print("\n[Step 7/9] Saving evaluation artifacts ...")
+    # ── 6. Save evaluation artifacts ────────────────────────────────────────
+    print("\n[Step 6/7] Saving evaluation artifacts ...")
     DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
     # Feature names from the validation feature matrix
@@ -277,50 +257,15 @@ def run() -> None:
         cv_results,
     )
 
-    # Add LSTM metrics and ROC curve to dashboard JSON
-    lstm_gini = 2 * lstm_metrics["auroc"] - 1
-    dashboard_json["lstm_auroc"] = lstm_metrics["auroc"]
-    dashboard_json["lstm_pr_auc"] = lstm_metrics["pr_auc"]
-    dashboard_json["lstm_sensitivity"] = lstm_metrics["sensitivity"]
-    dashboard_json["lstm_specificity"] = lstm_metrics["specificity"]
-    dashboard_json["lstm_f1"] = lstm_metrics["f1"]
-    dashboard_json["lstm_precision"] = lstm_metrics["precision"]
-    dashboard_json["lstm_recall"] = lstm_metrics["sensitivity"]
-    dashboard_json["lstm_gini"] = lstm_gini
-    dashboard_json["lstm_optimal_threshold"] = lstm_threshold
-    dashboard_json["lstm_params"] = {
-        "architecture": "LSTM(2 layers) -> FC(64->32->1) -> Sigmoid",
-        "hidden_size": 64,
-        "num_layers": 2,
-        "dropout": 0.3,
-        "seq_length": 12,
-        "optimizer": "Adam",
-        "learning_rate": 0.001,
-        "epochs": 20,
-        "batch_size": 256,
-        "loss": "BCELoss (class-weighted)",
-    }
-    dashboard_json["lstm_history"] = {
-        "val_auroc": lstm_output["history"]["val_auroc"],
-    }
-
-    # LSTM ROC curve
-    lstm_fpr, lstm_tpr, _ = roc_curve(
-        np.asarray(y_val_lstm), np.asarray(lstm_y_prob)
-    )
-    dashboard_json["lstm_fpr"] = lstm_fpr.tolist()
-    dashboard_json["lstm_tpr"] = lstm_tpr.tolist()
-
     metrics_path = DATA_PROCESSED / "model_metrics.json"
     with open(metrics_path, "w") as f:
         json.dump(dashboard_json, f, indent=2)
     print(f"  Saved metrics to {metrics_path}")
 
-    # ROC curve plot (all 3 models)
+    # ROC curve plot
     roc_data = {
         "Logistic Regression": (y_val, logistic_results["y_prob"]),
         "XGBoost": (y_val, xgb_results["y_prob"]),
-        "LSTM": (y_val_lstm, lstm_y_prob),
     }
     roc_path = str(DATA_PROCESSED / "roc_curves.png")
     plot_roc_curves(roc_data, save_path=roc_path)
@@ -331,28 +276,8 @@ def run() -> None:
         xgb_model, feature_names, top_n=30, save_path=importance_path,
     )
 
-    # ── 8. Save LSTM training curve ────────────────────────────────────────
-    print("\n[Step 8/9] Saving LSTM training history ...")
-    import matplotlib.pyplot as plt
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-    epochs_range = range(1, len(lstm_output["history"]["train_loss"]) + 1)
-    ax1.plot(epochs_range, lstm_output["history"]["train_loss"], label="Train")
-    ax1.plot(epochs_range, lstm_output["history"]["val_loss"], label="Val")
-    ax1.set_xlabel("Epoch")
-    ax1.set_ylabel("Loss")
-    ax1.set_title("LSTM Training Curve")
-    ax1.legend()
-    ax2.plot(epochs_range, lstm_output["history"]["val_auroc"], color="green")
-    ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("AUROC")
-    ax2.set_title("LSTM Validation AUROC")
-    fig.tight_layout()
-    fig.savefig(str(DATA_PROCESSED / "lstm_training.png"), dpi=150)
-    plt.close(fig)
-    print(f"  Saved to {DATA_PROCESSED / 'lstm_training.png'}")
-
-    # ── 9. Summary ──────────────────────────────────────────────────────────
-    _print_summary(logistic_results, xgb_results, lstm_results)
+    # ── 7. Summary ──────────────────────────────────────────────────────────
+    _print_summary(logistic_results, xgb_results)
 
 
 def main() -> None:

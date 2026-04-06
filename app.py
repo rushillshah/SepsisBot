@@ -1252,8 +1252,13 @@ def page_feature_importance():
             st.dataframe(rank_df[available_cols].head(20), use_container_width=True, hide_index=True)
 
     # ── SHAP Plots ───────────────────────────────────────────────────
-    shap_summary_path = DATA_PROCESSED / "shap_summary.png"
-    shap_bar_path = DATA_PROCESSED / "shap_bar.png"
+    # Prefer top-50 plots if available, fall back to original
+    shap_summary_path = DATA_PROCESSED / "feature_analysis" / "shap_top50_beeswarm.png"
+    if not shap_summary_path.exists():
+        shap_summary_path = DATA_PROCESSED / "shap_summary.png"
+    shap_bar_path = DATA_PROCESSED / "feature_analysis" / "shap_top50_bar.png"
+    if not shap_bar_path.exists():
+        shap_bar_path = DATA_PROCESSED / "shap_bar.png"
 
     if shap_summary_path.exists():
         st.markdown("### SHAP Summary Plot (Beeswarm)")

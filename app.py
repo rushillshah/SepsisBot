@@ -973,12 +973,43 @@ def page_model_performance():
             technical=(
                 f"TP={tp:,}, FN={fn:,}, FP={fp:,}, TN={tn:,}. "
                 f"PPV={ppv:.3f}, NPV={npv:.3f}. "
-                f"Derived from CV sensitivity ({cm['tp']/n_actual:.3f}) and specificity ({cm['tn']/n_no_sepsis:.3f}) "
-                f"applied to full population (40,111 patients). "
+                f"Computed from real patient-level predictions (max prob per patient vs threshold) "
+                f"summed across CV folds. "
                 f"Low PPV is expected at 7% prevalence — even good classifiers produce many FP."
             ),
             audience=audience,
         )
+    elif cm is None and metrics.get("patient_sensitivity") is None:
+        st.info("Run `python run_pipeline.py` to generate patient-level metrics.")
+
+    # Threshold tradeoff analysis
+    threshold_data = metrics.get("threshold_analysis")
+    if threshold_data:
+        st.markdown("### Threshold Tuning — Precision vs Recall Tradeoff")
+        st.caption("How do patient-level metrics change as we adjust the alert threshold?")
+        t_df = pd.DataFrame(threshold_data)
+        display_cols = ["threshold", "patient_sensitivity", "patient_specificity", "patient_precision", "patient_f1", "total_flagged"]
+        available = [c for c in display_cols if c in t_df.columns]
+        st.dataframe(t_df[available], use_container_width=True, hide_index=True)
+
+        explain(
+            clinical=(
+                "This table shows what happens when you make the model more or less strict. "
+                "A <b>higher threshold</b> means fewer alerts (fewer false alarms) but also misses more sepsis patients. "
+                "A <b>lower threshold</b> catches more sepsis but also floods clinicians with false alarms. "
+                "The right threshold depends on the clinical setting."
+            ),
+            technical=(
+                "Patient-level metrics at each threshold. max(prob) per patient compared to threshold. "
+                "Use this to find the operating point that balances sensitivity and specificity for your use case."
+            ),
+            audience=audience,
+        )
+
+    # Threshold tradeoff plot
+    threshold_plot = DATA_PROCESSED / "threshold_tradeoff.png"
+    if threshold_plot.exists():
+        st.image(str(threshold_plot), use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

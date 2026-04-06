@@ -243,6 +243,14 @@ def run() -> None:
     X_val = pipeline_output["X_val"]
     y_val = pipeline_output["y_val"]
 
+    # Save model objects as .pkl
+    import joblib
+    models_dir = DATA_PROCESSED / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(xgb_model, models_dir / "xgboost_model.pkl")
+    joblib.dump(logistic_model, models_dir / "logistic_model.pkl")
+    print(f"  Saved model .pkl files to {models_dir}")
+
     # ── 6. Evaluate models on Hospital B ──────────────────────────────────────
     print("\n[Step 6/8] Evaluating models on Hospital B ...")
     logistic_results = evaluate_model(

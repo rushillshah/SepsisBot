@@ -90,12 +90,44 @@ Order matters — each step depends on the previous:
 
 Rolling window: 6-hour backward-looking window with min_periods=1 (no future data leakage).
 
-## Architecture
+## Architecture — Two Fundamentally Different Approaches
 
-### Snapshot Models (LR + XGBoost)
-- Each hourly row = one training example with 145 engineered features
-- **Primary evaluation**: 5-fold patient-level stratified CV (StratifiedGroupKFold)
-- **Secondary**: Cross-hospital holdout (train Hospital A, validate Hospital B)
+### Approach 1: Snapshot Models (LR + XGBoost) — CV Pipeline
+
+**How it works:** Each hourly row is treated as an independent prediction. The model sees a snapshot of the patient at one moment in time — 170 engineered features including raw vitals/labs, rolling statistics over the last 6 hours, hour-over-hour deltas, missingness patterns, and clinical scores (SIRS, qSOFA, etc.). It asks: "given everything I see RIGHT NOW, is this patient heading toward sepsis?"
+
+**Why it works:** The feature engineering does the temporal heavy lifting. Rolling means, mins, maxes, and standard deviations over 6 hours capture trends without the model needing to understand sequences. XGBoost is excellent at tabular data with complex interactions (e.g., "high lactate AND rising HR AND falling MAP").
+
+**Evaluation:** 3-fold patient-level stratified CV (StratifiedGroupKFold). All hours for one patient stay in the same fold — no leakage. Both hospitals represented in every fold. XGBoost is Platt-calibrated so probabilities are meaningful.
+
+**Current AUROC: 0.806 (XGBoost), 0.778 (LR)**
+
+### Approach 2: LSTM Sequence Model — NOT YET TRAINED
+
+**How it works:** Instead of one row = one prediction, the LSTM sees a *sequence* of the last 12 hours as a single input. Shape: (12 timesteps, 39 raw features). It uses only raw vitals + labs + demographics — NO engineered features (no rolling stats, no missingness flags, no clinical scores). The LSTM learns its own temporal patterns from the sequence structure.
+
+**Why it might be better:** The LSTM sees the actual temporal evolution — not just "HR was high and variable over 6 hours" but the exact trajectory: "HR was 80, then 85, then 90, then 95, then 100, then 105." This can capture patterns that rolling statistics miss, like the *shape* of deterioration (sudden vs gradual).
+
+**Why it might be worse:** LSTMs need more data to train well, are harder to interpret (no feature importance), and the 12-hour window is arbitrary. Also, 39 raw features per timestep means the LSTM has to discover patterns that XGBoost gets for free via feature engineering.
+
+**Status:** Module built (`src/train_lstm.py`), but training hangs on MPS (Apple Silicon GPU). Nachiket plans to train on a proper GPU. Not included in the pipeline.
+
+### Which to Use
+
+For the PoC presentation, use the **CV XGBoost results** (0.806 AUROC). They're validated, interpretable (SHAP plots), and the model .pkl is saved. The LSTM is a stretch goal — if it beats 0.806 on the same CV setup, it becomes the primary model. If not, XGBoost with good feature engineering is hard to beat on tabular ICU data.
+
+### Key Difference Summary
+
+| | Snapshot (XGBoost/LR) | Sequence (LSTM) |
+|---|---|---|
+| Input shape | (1 row, 170 features) | (12 hours, 39 features) |
+| Feature engineering | Heavy (rolling, trends, missingness, clinical scores) | None (raw values only) |
+| Temporal awareness | Via engineered features (rolling stats, deltas) | Native (learns from sequence) |
+| Interpretability | High (SHAP, feature importance) | Low (black box) |
+| Training speed | Fast (~25 min for full CV) | Slow (needs GPU) |
+| Current AUROC | **0.806** | Not yet trained |
+
+### Pipeline Details
 - Feature scaling: StandardScaler fit on train fold only
 - XGBoost calibrated via Platt scaling (CalibratedClassifierCV)
 - Class imbalance: scale_pos_weight (XGBoost), class_weight='balanced' (LR)

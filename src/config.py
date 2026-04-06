@@ -34,7 +34,9 @@ ALL_INPUT_COLS = ALL_FEATURE_COLS + DEMOGRAPHIC_COLS + [TIME_COL]
 
 ROLLING_WINDOW_HOURS = 6
 ROLLING_STATS = ["mean", "min", "max", "std"]
-ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets", "MAP"]
+CLINICAL_SCORE_COLS = ["sirs_score", "qsofa_mod", "shock_index", "mews_mod", "lactate_map_ratio"]
+
+ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets", "MAP"] + CLINICAL_SCORE_COLS
 
 # ── Model Hyperparameters ──────────────────────────────────────────────────────
 

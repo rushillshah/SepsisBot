@@ -98,10 +98,15 @@ def imputed_df() -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
+def _present_rolling_cols(df: pd.DataFrame) -> list[str]:
+    """Rolling cols that actually exist in the test fixture."""
+    return [c for c in _ROLLING_COLS_UNIQUE if c in df.columns]
+
+
 class TestRollingFeatures:
     def test_rolling_columns_created(self, imputed_df: pd.DataFrame) -> None:
         result = add_rolling_features(imputed_df)
-        for col in _ROLLING_COLS_UNIQUE:
+        for col in _present_rolling_cols(imputed_df):
             for stat in ROLLING_STATS:
                 expected_name = f"{col}_roll_{stat}"
                 assert expected_name in result.columns, (
@@ -116,7 +121,7 @@ class TestRollingFeatures:
         result = add_rolling_features(imputed_df)
         p1 = result[result["patient_id"] == "p001"]
 
-        for col in _ROLLING_COLS_UNIQUE:
+        for col in _present_rolling_cols(imputed_df):
             first_val = p1.iloc[0][col]
             first_roll_mean = p1.iloc[0][f"{col}_roll_mean"]
             assert first_roll_mean == pytest.approx(first_val), (
@@ -146,7 +151,7 @@ class TestRollingFeatures:
         result = add_rolling_features(imputed_df)
         p1 = result[result["patient_id"] == "p001"]
 
-        for col in _ROLLING_COLS_UNIQUE:
+        for col in _present_rolling_cols(imputed_df):
             std_val = p1.iloc[0][f"{col}_roll_std"]
             assert std_val == 0.0, (
                 f"Expected 0.0 for single-obs std of {col}, got {std_val}"

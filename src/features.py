@@ -9,11 +9,13 @@ Expected input: a DataFrame that has already passed through
 and ``{col}_hours_since`` columns present.
 """
 
+import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 from src.config import (
     ALL_FEATURE_COLS,
+    CLINICAL_SCORE_COLS,
     DEMOGRAPHIC_COLS,
     EXCLUDED_FEATURES,
     LABEL_COL,
@@ -54,6 +56,8 @@ def add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
     grouped = result.groupby("patient_id")
 
     for col in _ROLLING_COLS_UNIQUE:
+        if col not in result.columns:
+            continue
         rolling = grouped[col].rolling(
             window=ROLLING_WINDOW_HOURS,
             min_periods=1,
@@ -125,6 +129,97 @@ def get_feature_names(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in _DROP_COLS]
 
 
+def _mews_hr(hr: pd.Series) -> pd.Series:
+    """MEWS heart rate component: 0-3."""
+    return pd.Series(np.select(
+        [hr >= 130, (hr >= 111) & (hr <= 129), (hr >= 101) & (hr <= 110),
+         (hr >= 51) & (hr <= 100), (hr >= 41) & (hr <= 50), hr <= 40],
+        [3, 2, 1, 0, 1, 2],
+        default=0,
+    ), index=hr.index, dtype=float)
+
+
+def _mews_sbp(sbp: pd.Series) -> pd.Series:
+    """MEWS systolic BP component: 0-3."""
+    return pd.Series(np.select(
+        [sbp <= 70, (sbp >= 71) & (sbp <= 80), (sbp >= 81) & (sbp <= 100),
+         (sbp >= 101) & (sbp <= 199), sbp >= 200],
+        [3, 2, 1, 0, 2],
+        default=0,
+    ), index=sbp.index, dtype=float)
+
+
+def _mews_resp(resp: pd.Series) -> pd.Series:
+    """MEWS respiratory rate component: 0-3."""
+    return pd.Series(np.select(
+        [resp <= 8, (resp >= 9) & (resp <= 14), (resp >= 15) & (resp <= 20),
+         (resp >= 21) & (resp <= 29), resp >= 30],
+        [3, 0, 1, 2, 3],
+        default=0,
+    ), index=resp.index, dtype=float)
+
+
+def _mews_temp(temp: pd.Series) -> pd.Series:
+    """MEWS temperature component: 0 or 2."""
+    return pd.Series(
+        np.where((temp >= 38.5) | (temp < 35), 2.0, 0.0),
+        index=temp.index, dtype=float,
+    )
+
+
+def add_clinical_scores(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute validated clinical scoring features from existing vitals/labs.
+
+    Adds 5 columns: sirs_score, qsofa_mod, shock_index, mews_mod,
+    lactate_map_ratio. Computed from raw (imputed) values — call BEFORE
+    rolling/trend features so these scores also get temporal stats.
+
+    Returns a new DataFrame (no mutation).
+    """
+    result = df.copy()
+
+    hr = result.get("HR", pd.Series(dtype=float))
+    temp = result.get("Temp", pd.Series(dtype=float))
+    resp = result.get("Resp", pd.Series(dtype=float))
+    sbp = result.get("SBP", pd.Series(dtype=float))
+    wbc = result.get("WBC", pd.Series(dtype=float))
+    map_col = result.get("MAP", pd.Series(dtype=float))
+    lactate = result.get("Lactate", pd.Series(dtype=float))
+
+    # SIRS Score (0-4): 4 binary criteria summed
+    sirs = (
+        ((temp > 38) | (temp < 36)).astype(float)
+        + (hr > 90).astype(float)
+        + (resp > 20).astype(float)
+        + ((wbc > 12) | (wbc < 4)).astype(float)
+    )
+    result["sirs_score"] = sirs.fillna(0)
+
+    # Modified qSOFA (0-2): 2 of 3 components (missing GCS)
+    qsofa = (
+        (resp >= 22).astype(float)
+        + (sbp <= 100).astype(float)
+    )
+    result["qsofa_mod"] = qsofa.fillna(0)
+
+    # Shock Index: HR / SBP
+    with np.errstate(divide="ignore", invalid="ignore"):
+        si = hr / sbp.replace(0, np.nan)
+    result["shock_index"] = si.clip(0, 5).fillna(0)
+
+    # Modified MEWS (0-8ish)
+    result["mews_mod"] = (
+        _mews_hr(hr) + _mews_sbp(sbp) + _mews_resp(resp) + _mews_temp(temp)
+    ).fillna(0)
+
+    # Lactate / MAP ratio
+    with np.errstate(divide="ignore", invalid="ignore"):
+        lm = lactate / map_col.replace(0, np.nan)
+    result["lactate_map_ratio"] = lm.clip(0, 10).fillna(0)
+
+    return result
+
+
 def build_feature_matrix(
     df: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.Series]:
@@ -165,7 +260,8 @@ def build_feature_matrix(
             "Ensure the raw data has been loaded correctly."
         )
 
-    enriched = add_rolling_features(df)
+    enriched = add_clinical_scores(df)
+    enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)
 
     y = enriched[LABEL_COL].copy()

@@ -1,5 +1,9 @@
 # CLAUDE.md — Sepsis Early Warning System
 
+## On Session Start
+
+Read the session logs in `docs/sessions/` for detailed development history, past decisions, and context behind the current state. Also read `docs/model_report.md` for the full model documentation. These files contain critical context that isn't duplicated here.
+
 ## What This Project Is
 
 A proof-of-concept predictive model for **early sepsis detection** from ICU patient data. The goal is to demonstrate feasibility with open-source data (PhysioNet CinC 2019) so we can get access to real patient data for a production system.

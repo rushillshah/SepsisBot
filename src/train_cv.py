@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import (
     RandomizedSearchCV,
     StratifiedGroupKFold,
@@ -169,11 +170,17 @@ def _train_fold(
     xgb_threshold = find_optimal_threshold(y_val.to_numpy(), xgb_prob)
     xgb_metrics = compute_metrics(y_val.to_numpy(), xgb_prob, threshold=xgb_threshold)
 
+    # ── Train-set evaluation (overfit checking) ────────────────────────────
+    lr_train_prob = lr.predict_proba(X_train)[:, 1]
+    lr_train_auroc = roc_auc_score(y_train, lr_train_prob)
+
+    xgb_train_prob = calibrated_xgb.predict_proba(X_train)[:, 1]
+    xgb_train_auroc = roc_auc_score(y_train, xgb_train_prob)
+
     print(
         f"  Fold {fold_num} | "
-        f"LR AUROC={lr_metrics['auroc']:.4f}  "
-        f"XGB AUROC={xgb_metrics['auroc']:.4f}  "
-        f"(inner best={search.best_score_:.4f})"
+        f"LR: train={lr_train_auroc:.4f} val={lr_metrics['auroc']:.4f}  "
+        f"XGB: train={xgb_train_auroc:.4f} val={xgb_metrics['auroc']:.4f}"
     )
 
     return {
@@ -185,6 +192,8 @@ def _train_fold(
         "y_val": y_val.to_numpy(),
         "xgb_prob": xgb_prob,
         "lr_prob": lr_prob,
+        "lr_train_auroc": float(lr_train_auroc),
+        "xgb_train_auroc": float(xgb_train_auroc),
     }
 
 
@@ -223,12 +232,25 @@ def cross_validate_pipeline(df: pd.DataFrame) -> dict:
     avg_xgb_metrics = _average_metrics([r["xgb_metrics"] for r in fold_results])
     avg_lr_metrics = _average_metrics([r["lr_metrics"] for r in fold_results])
 
-    _print_summary(avg_xgb_metrics, avg_lr_metrics)
+    overfit_table = []
+    for i, r in enumerate(fold_results, 1):
+        overfit_table.append({
+            "fold": i,
+            "lr_train_auroc": r["lr_train_auroc"],
+            "lr_val_auroc": r["lr_metrics"]["auroc"],
+            "lr_gap": r["lr_train_auroc"] - r["lr_metrics"]["auroc"],
+            "xgb_train_auroc": r["xgb_train_auroc"],
+            "xgb_val_auroc": r["xgb_metrics"]["auroc"],
+            "xgb_gap": r["xgb_train_auroc"] - r["xgb_metrics"]["auroc"],
+        })
+
+    _print_summary(avg_xgb_metrics, avg_lr_metrics, overfit_table)
 
     return {
         "avg_xgb_metrics": avg_xgb_metrics,
         "avg_lr_metrics": avg_lr_metrics,
         "fold_results": fold_results,
+        "overfit_table": overfit_table,
     }
 
 
@@ -259,7 +281,7 @@ def _average_metrics(metrics_list: list[dict]) -> dict:
     return averaged
 
 
-def _print_summary(avg_xgb: dict, avg_lr: dict) -> None:
+def _print_summary(avg_xgb: dict, avg_lr: dict, overfit_table: list[dict]) -> None:
     """Print the cross-validation summary table to stdout."""
     width = 60
     print("\n" + "=" * width)
@@ -284,3 +306,8 @@ def _print_summary(avg_xgb: dict, avg_lr: dict) -> None:
     print("-" * width)
     print(f"  {'Gini Coefficient':<20s} {lr_gini:>10.4f} {'':>8s} {xgb_gini:>10.4f}")
     print("=" * width)
+
+    print("\n  OVERFIT CHECK (Train vs Val AUROC)")
+    print(f"  {'Fold':<6s} {'LR Train':>10s} {'LR Val':>10s} {'LR Gap':>10s} {'XGB Train':>10s} {'XGB Val':>10s} {'XGB Gap':>10s}")
+    for row in overfit_table:
+        print(f"  {row['fold']:<6d} {row['lr_train_auroc']:>10.4f} {row['lr_val_auroc']:>10.4f} {row['lr_gap']:>10.4f} {row['xgb_train_auroc']:>10.4f} {row['xgb_val_auroc']:>10.4f} {row['xgb_gap']:>10.4f}")

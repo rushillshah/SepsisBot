@@ -145647,5 +145647,14 @@
     0.9999070718334727,
     1.0,
     1.0
-  ]
+  ],
+  "confusion_matrix": {
+    "tp": 2158,
+    "fn": 764,
+    "fp": 10388,
+    "tn": 26801,
+    "total_patients": 40111,
+    "actual_sepsis": 2922,
+    "actual_no_sepsis": 37189
+  }
 }

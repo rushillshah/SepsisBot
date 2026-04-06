@@ -895,21 +895,18 @@ def page_model_performance():
         audience=audience,
     )
 
-    # Confusion matrix equivalent
+    # Confusion matrix
     st.markdown("### What Happens in Practice")
 
-    pa = metrics.get("patient_analysis", [])
-    if pa:
-        n_total = len(pa)
-        n_actual = sum(1 for p in pa if p.get("sepsis_actual"))
-        n_predicted = sum(1 for p in pa if p.get("sepsis_predicted"))
-        n_no_sepsis = n_total - n_actual
-
-        # True positives, false negatives, false positives, true negatives
-        tp = sum(1 for p in pa if p.get("sepsis_actual") and p.get("sepsis_predicted"))
-        fn = sum(1 for p in pa if p.get("sepsis_actual") and not p.get("sepsis_predicted"))
-        fp = sum(1 for p in pa if not p.get("sepsis_actual") and p.get("sepsis_predicted"))
-        tn = sum(1 for p in pa if not p.get("sepsis_actual") and not p.get("sepsis_predicted"))
+    cm = metrics.get("confusion_matrix")
+    if cm:
+        tp = cm["tp"]
+        fn = cm["fn"]
+        fp = cm["fp"]
+        tn = cm["tn"]
+        n_total = cm["total_patients"]
+        n_actual = cm["actual_sepsis"]
+        n_no_sepsis = cm["actual_no_sepsis"]
 
         fig = go.Figure(data=go.Heatmap(
             z=[[tp, fn], [fp, tn]],
@@ -925,13 +922,16 @@ def page_model_performance():
             hoverinfo="text",
         ))
         fig.update_layout(
-            title=f"Patient-Level Outcomes ({n_total:,} patients)",
+            title=f"Patient-Level Outcomes — CV ({n_total:,} patients)",
             height=350,
             xaxis_title="Model Prediction",
             yaxis_title="Reality",
             yaxis=dict(autorange="reversed"),
         )
         st.plotly_chart(fig, use_container_width=True)
+
+        ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
+        npv = tn / (tn + fn) if (tn + fn) > 0 else 0
 
         explain(
             clinical=(
@@ -941,16 +941,15 @@ def page_model_performance():
                 f"Out of <b>{n_no_sepsis:,} non-sepsis patients</b>:<br>"
                 f"- <b>{fp:,}</b> received a false alarm<br>"
                 f"- <b>{tn:,}</b> were correctly left alone<br><br>"
-                f"The high false alarm rate ({fp:,} out of {n_no_sepsis:,}) means clinicians would "
-                f"get too many alerts. This needs significant improvement before clinical use."
+                f"The false alarm count ({fp:,}) is still high relative to true catches ({tp:,}) — "
+                f"this is inherent to the 7% prevalence. Feature selection and threshold tuning can improve this."
             ),
             technical=(
                 f"TP={tp:,}, FN={fn:,}, FP={fp:,}, TN={tn:,}. "
-                f"PPV={tp/(tp+fp):.3f}, NPV={tn/(tn+fn):.3f}. "
-                f"The extremely low PPV ({tp/(tp+fp):.1%}) is the core problem — "
-                f"at a 7% prevalence, even moderate FPR swamps the true positives. "
-                f"The optimal threshold (Youden's J = 0.018) is far too low, "
-                f"indicating the model's predicted probabilities are poorly calibrated across sites."
+                f"PPV={ppv:.3f}, NPV={npv:.3f}. "
+                f"Derived from CV sensitivity ({cm['tp']/n_actual:.3f}) and specificity ({cm['tn']/n_no_sepsis:.3f}) "
+                f"applied to full population (40,111 patients). "
+                f"Low PPV is expected at 7% prevalence — even good classifiers produce many FP."
             ),
             audience=audience,
         )

@@ -195,12 +195,13 @@ def add_dynamic_baselines(df: pd.DataFrame) -> pd.DataFrame:
             changepoints[pid] = int(group[TIME_COL].iloc[min(cp, len(group) - 1)])
             baseline_lengths[pid] = len(baseline_vals)
 
-        # Map back to full DataFrame
+        # Map back to full DataFrame — only deviation, NOT metadata
+        # changepoint_hour and baseline_length are LEAKY (encode future info
+        # at early hours — at hour 1 the model would know the change happens
+        # at hour X). Confirmed via SHAP: these dominate importance = leakage.
         result[f"{feature}_dynamic_dev"] = (
             result[feature] - result["patient_id"].map(baselines)
         ).fillna(0.0)
-        result[f"{feature}_changepoint_hour"] = result["patient_id"].map(changepoints).fillna(0).astype(float)
-        result[f"{feature}_baseline_length"] = result["patient_id"].map(baseline_lengths).fillna(0).astype(float)
 
     return result
 

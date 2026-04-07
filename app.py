@@ -753,6 +753,40 @@ def page_model_performance():
                 audience=audience,
             )
 
+    # ── Per-Fold Detail ────────────────────────────────────────────────────
+    fold_detail = metrics.get("fold_detail")
+    if fold_detail:
+        st.markdown("### Per-Fold Results")
+
+        # Metrics per fold
+        fd_df = pd.DataFrame(fold_detail)
+        metrics_display = pd.DataFrame({
+            "Fold": fd_df["fold"],
+            "XGB AUROC": fd_df["xgb_auroc"].map(lambda x: f"{x:.4f}"),
+            "XGB Sens": fd_df["xgb_sensitivity"].map(lambda x: f"{x:.4f}"),
+            "XGB Spec": fd_df["xgb_specificity"].map(lambda x: f"{x:.4f}"),
+            "XGB Prec": fd_df["xgb_precision"].map(lambda x: f"{x:.4f}"),
+            "LR AUROC": fd_df["lr_auroc"].map(lambda x: f"{x:.4f}"),
+            "Pat Sens": fd_df["patient_sensitivity"].map(lambda x: f"{x:.1%}"),
+            "Pat Spec": fd_df["patient_specificity"].map(lambda x: f"{x:.1%}"),
+            "Pat Prec": fd_df["patient_precision"].map(lambda x: f"{x:.1%}"),
+        })
+        st.dataframe(metrics_display, use_container_width=True, hide_index=True)
+
+        # Parameters per fold
+        with st.expander("XGBoost Parameters per Fold"):
+            for fd in fold_detail:
+                params = fd.get("xgb_best_params", {})
+                if params:
+                    st.markdown(f"**Fold {fd['fold']}** (threshold: {fd.get('xgb_threshold', 'N/A'):.4f})")
+                    params_df = pd.DataFrame([{"Parameter": k, "Value": str(v)} for k, v in params.items()])
+                    st.dataframe(params_df, use_container_width=True, hide_index=True)
+
+        # Patient-level confusion matrix per fold
+        with st.expander("Patient-Level Confusion Matrix per Fold"):
+            for fd in fold_detail:
+                st.markdown(f"**Fold {fd['fold']}:** TP={fd['patient_tp']}, FP={fd['patient_fp']}, FN={fd['patient_fn']}, TN={fd['patient_tn']}")
+
     # ── Full CV Metrics Table ────────────────────────────────────────────────
     if cv_xgb_auroc is None:
         st.info("No CV data available. Run `python run_pipeline.py` to generate.")

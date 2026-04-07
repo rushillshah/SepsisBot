@@ -134,6 +134,48 @@ def run() -> None:
     dashboard_json["n_features"] = len(feature_names)
     dashboard_json["default_threshold"] = 0.10
 
+    # Per-fold detail for dashboard
+    fold_detail = []
+    for i, fr in enumerate(cv_results["fold_results"], 1):
+        fold_detail.append({
+            "fold": i,
+            "xgb_auroc": fr["xgb_metrics"]["auroc"],
+            "xgb_sensitivity": fr["xgb_metrics"]["sensitivity"],
+            "xgb_specificity": fr["xgb_metrics"]["specificity"],
+            "xgb_precision": fr["xgb_metrics"]["precision"],
+            "xgb_f1": fr["xgb_metrics"]["f1"],
+            "xgb_pr_auc": fr["xgb_metrics"]["pr_auc"],
+            "xgb_train_auroc": fr["lr_train_auroc"],
+            "xgb_best_params": fr["xgb_best_params"],
+            "xgb_threshold": fr["xgb_threshold"],
+            "lr_auroc": fr["lr_metrics"]["auroc"],
+            "lr_sensitivity": fr["lr_metrics"]["sensitivity"],
+            "lr_specificity": fr["lr_metrics"]["specificity"],
+            "lr_precision": fr["lr_metrics"]["precision"],
+            "patient_sensitivity": fr["xgb_patient_cm"]["sensitivity"],
+            "patient_specificity": fr["xgb_patient_cm"]["specificity"],
+            "patient_precision": fr["xgb_patient_cm"]["precision"],
+            "patient_tp": fr["xgb_patient_cm"]["tp"],
+            "patient_fp": fr["xgb_patient_cm"]["fp"],
+            "patient_fn": fr["xgb_patient_cm"]["fn"],
+            "patient_tn": fr["xgb_patient_cm"]["tn"],
+        })
+    dashboard_json["fold_detail"] = fold_detail
+
+    # Save concatenated CV predictions to parquet
+    concat = cv_results.get("concat_predictions", {})
+    if "xgb_probs" in concat:
+        import pandas as pd
+        cv_preds_df = pd.DataFrame({
+            "patient_id": concat["patient_ids"],
+            "label": concat["labels"],
+            "xgb_prob": concat["xgb_probs"],
+            "lr_prob": concat["lr_probs"],
+        })
+        cv_preds_path = DATA_PROCESSED / "cv_predictions.parquet"
+        cv_preds_df.to_parquet(cv_preds_path, index=False)
+        print(f"  Saved CV predictions to {cv_preds_path} ({len(cv_preds_df):,} rows)")
+
     # Threshold analysis from honest CV concat (already computed in cross_validate_pipeline)
     dashboard_json["threshold_analysis"] = cv_results.get("threshold_analysis", [])
 

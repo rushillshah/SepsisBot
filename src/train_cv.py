@@ -116,26 +116,28 @@ def _train_fold(
     df_train = df.iloc[train_idx].reset_index(drop=True)
     df_val = df.iloc[val_idx].reset_index(drop=True)
 
-    # ── Undersample non-sepsis patients in training set ───────────────────
-    # Keep ALL sepsis patients, randomly sample non-sepsis to ~3:1 ratio
-    train_pids = df_train.groupby("patient_id")[LABEL_COL].max()
-    sepsis_pids = train_pids[train_pids == 1].index.tolist()
-    nonsepsis_pids = train_pids[train_pids == 0].index.tolist()
-
-    # Target: 3x non-sepsis patients per sepsis patient
-    n_keep = min(len(nonsepsis_pids), len(sepsis_pids) * 3)
-    rng = np.random.RandomState(RANDOM_STATE + fold_num)
-    sampled_nonsepsis = rng.choice(nonsepsis_pids, size=n_keep, replace=False).tolist()
-
-    keep_pids = set(sepsis_pids + sampled_nonsepsis)
-    df_train_balanced = df_train[df_train["patient_id"].isin(keep_pids)].reset_index(drop=True)
-
-    n_sep = len(sepsis_pids)
-    n_nonsep_orig = len(nonsepsis_pids)
-    print(f"    Undersampled: {n_sep} sepsis + {n_keep}/{n_nonsep_orig} non-sepsis patients")
-
-    X_train_raw, y_train = build_feature_matrix(df_train_balanced)
+    X_train_raw, y_train = build_feature_matrix(df_train)
     X_val_raw, y_val = build_feature_matrix(df_val)
+
+    # ── Oversample sepsis rows in training set ────────────────────────────
+    # Duplicate sepsis rows to reach ~1:3 ratio (sepsis:non-sepsis)
+    sepsis_mask = y_train == 1
+    n_sepsis = int(sepsis_mask.sum())
+    n_nonsepsis = int((~sepsis_mask).sum())
+
+    if n_sepsis > 0:
+        target_sepsis = n_nonsepsis // 3  # aim for 1:3 ratio
+        oversample_factor = max(1, target_sepsis // n_sepsis)
+
+        if oversample_factor > 1:
+            X_sepsis = X_train_raw[sepsis_mask]
+            y_sepsis = y_train[sepsis_mask]
+            # Repeat sepsis rows
+            X_oversampled = pd.concat([X_train_raw] + [X_sepsis] * (oversample_factor - 1), ignore_index=True)
+            y_oversampled = pd.concat([y_train] + [y_sepsis] * (oversample_factor - 1), ignore_index=True)
+            print(f"    Oversampled sepsis: {n_sepsis} -> {n_sepsis * oversample_factor} rows ({oversample_factor}x), non-sepsis: {n_nonsepsis}")
+            X_train_raw = X_oversampled
+            y_train = y_oversampled
 
     X_train, X_val, _ = scale_features(X_train_raw, X_val_raw)
 

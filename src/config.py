@@ -41,23 +41,13 @@ CLINICAL_SCORE_COLS = ["sirs_score", "qsofa_mod", "shock_index", "mews_mod", "la
 BASELINE_VITALS = ["HR", "Resp", "SBP", "MAP", "O2Sat", "Temp"]
 BASELINE_DEVIATION_COLS = [f"{v}_baseline_dev" for v in BASELINE_VITALS]
 
-ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets", "MAP"] + CLINICAL_SCORE_COLS + BASELINE_DEVIATION_COLS
-
-# ── Model Hyperparameters ──────────────────────────────────────────────────────
-
-XGBOOST_PARAM_GRID = {
-    "max_depth": [3, 5, 7],
-    "learning_rate": [0.01, 0.05, 0.1],
-    "n_estimators": [100, 300, 500],
-    "subsample": [0.7, 0.8],
-    "colsample_bytree": [0.7, 0.8],
-}
+ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets"] + CLINICAL_SCORE_COLS + BASELINE_DEVIATION_COLS
 
 # ── Features to Exclude (site-specific confounders) ────────────────────────
 
 EXCLUDED_FEATURES = ["Unit1", "Unit2", "HospAdmTime", "ICULOS"]
 
-# ── Improved Model Hyperparameters ─────────────────────────────────────────
+# ── Model Hyperparameters ──────────────────────────────────────────────────────
 
 XGBOOST_PARAM_GRID_V2 = {
     "max_depth": [3, 4, 5],
@@ -74,5 +64,6 @@ XGBOOST_PARAM_GRID_V2 = {
 CV_N_ITER = 5
 
 CV_FOLDS = 3
+INNER_CV_FOLDS = 3
 RANDOM_STATE = 42
-TARGET_AUROC = 0.80
+DEFAULT_THRESHOLD = 0.30

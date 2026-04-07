@@ -22,7 +22,7 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from src.config import LABEL_COL, TARGET_AUROC, TIME_COL
+from src.config import LABEL_COL, TIME_COL
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────────
@@ -362,10 +362,7 @@ def print_evaluation_report(metrics: dict, model_name: str) -> None:
         label = key.replace("_", " ").title()
         print(f"  {label:<20s}: {value:.4f}")
 
-    target_met = metrics.get("auroc", 0) >= TARGET_AUROC
-    status = "PASS" if target_met else "BELOW TARGET"
     print("-" * width)
-    print(f"  Target AUROC ({TARGET_AUROC:.2f}): {status}")
     print("=" * width)
 
 

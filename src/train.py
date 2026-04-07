@@ -11,7 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
 from xgboost import XGBClassifier
 
-from src.config import CV_FOLDS, RANDOM_STATE, XGBOOST_PARAM_GRID
+from src.config import CV_FOLDS, RANDOM_STATE, XGBOOST_PARAM_GRID_V2
 from src.features import build_feature_matrix
 
 
@@ -176,7 +176,7 @@ def tune_xgboost(
         Binary labels.
     param_grid : dict | None
         Hyperparameter distributions. Falls back to
-        ``config.XGBOOST_PARAM_GRID`` when ``None``.
+        ``config.XGBOOST_PARAM_GRID_V2`` when ``None``.
 
     Returns
     -------
@@ -184,7 +184,7 @@ def tune_xgboost(
         ``(best_model, best_params)`` from the search.
     """
     if param_grid is None:
-        param_grid = XGBOOST_PARAM_GRID
+        param_grid = XGBOOST_PARAM_GRID_V2
 
     scale_pos_weight = _compute_scale_pos_weight(y_train)
 

@@ -4,27 +4,16 @@ Steps:
     1. Load raw PSV data from both hospitals and save as parquet.
     2. Impute missing values (missingness flags, time-since-measured, ffill).
     3. Patient-level cross-validation (primary evaluation).
-    4. Feature importance analysis (IV, SHAP, gain ranking).
-    5. Save metrics JSON, plots, and model .pkl files.
+    4. Save metrics JSON, plots, and model artifacts.
 """
 
 import json
 import sys
-from pathlib import Path
 
-import joblib
-import numpy as np
 from sklearn.metrics import roc_curve
 
 from src.config import DATA_PROCESSED
 from src.data_loader import load_all_data, load_processed, save_processed
-from src.evaluate import plot_roc_curves
-from src.feature_importance import (
-    combined_feature_ranking,
-    compute_gain_importance,
-    compute_information_value,
-    compute_shap_values,
-)
 from src.features import build_feature_matrix
 from src.imputation import impute
 from src.train_cv import cross_validate_pipeline
@@ -100,7 +89,7 @@ def run() -> None:
     """Execute the full sepsis prediction pipeline."""
 
     # ── 1. Load raw data ────────────────────────────────────────────────────
-    print("\n[Step 1/5] Loading raw data ...")
+    print("\n[Step 1/4] Loading raw data ...")
     try:
         raw_df = load_processed("raw_data")
         print(f"  Loaded cached raw data: {len(raw_df):,} rows")

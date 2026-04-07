@@ -141,23 +141,16 @@ def add_baseline_deviations(df: pd.DataFrame) -> pd.DataFrame:
     (high deviation).
     """
     result = df.copy()
-
+    # Sort by patient + time to ensure head(6) gets first 6 hours
+    sorted_df = result.sort_values(["patient_id", TIME_COL])
     for vital in BASELINE_VITALS:
         if vital not in result.columns:
             continue
-
-        # Compute per-patient baseline: mean of first 6 rows (sorted by ICULOS)
-        def _patient_baseline(group):
-            sorted_vals = group.sort_values(TIME_COL)[vital].head(6)
-            baseline = sorted_vals.mean()
-            return group[vital] - baseline
-
-        result[f"{vital}_baseline_dev"] = (
-            result.groupby("patient_id", group_keys=False)
-            .apply(_patient_baseline)
-        )
+        # Compute mean of first 6 rows per patient
+        baselines = sorted_df.groupby("patient_id").head(6).groupby("patient_id")[vital].mean()
+        # Map back and compute deviation
+        result[f"{vital}_baseline_dev"] = result[vital] - result["patient_id"].map(baselines)
         result[f"{vital}_baseline_dev"] = result[f"{vital}_baseline_dev"].fillna(0.0)
-
     return result
 
 
@@ -282,16 +275,13 @@ def create_early_label(df: pd.DataFrame, extra_hours: int = EARLY_LABEL_EXTRA_HO
     """
     result = df.copy()
     result[EARLY_LABEL_COL] = 0
-
-    for pid, group in result.groupby("patient_id"):
-        sepsis_rows = group[group[LABEL_COL] == 1]
-        if len(sepsis_rows) == 0:
-            continue
-        onset_hour = sepsis_rows[TIME_COL].iloc[0]
-        early_start = onset_hour - extra_hours
-        mask = (result["patient_id"] == pid) & (result[TIME_COL] >= early_start)
-        result.loc[mask, EARLY_LABEL_COL] = 1
-
+    # Find onset hour per patient (first SepsisLabel=1)
+    onset = result[result[LABEL_COL] == 1].groupby("patient_id")[TIME_COL].min().rename("_onset_hour")
+    result = result.merge(onset, on="patient_id", how="left")
+    # Set early_label=1 where ICULOS >= onset - extra_hours
+    mask = result["_onset_hour"].notna() & (result[TIME_COL] >= result["_onset_hour"] - extra_hours)
+    result.loc[mask, EARLY_LABEL_COL] = 1
+    result = result.drop(columns=["_onset_hour"])
     return result
 
 

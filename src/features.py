@@ -17,6 +17,8 @@ from src.config import (
     ALL_FEATURE_COLS,
     CLINICAL_SCORE_COLS,
     DEMOGRAPHIC_COLS,
+    EARLY_LABEL_COL,
+    EARLY_LABEL_EXTRA_HOURS,
     EXCLUDED_FEATURES,
     LABEL_COL,
     LAB_COLS,
@@ -242,8 +244,30 @@ def add_clinical_scores(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def create_early_label(df: pd.DataFrame, extra_hours: int = EARLY_LABEL_EXTRA_HOURS) -> pd.DataFrame:
+    """Create extended positive label window for early detection training.
+
+    For each sepsis patient, sets early_label=1 starting `extra_hours`
+    before the first SepsisLabel=1 hour. Non-sepsis patients get 0.
+    """
+    result = df.copy()
+    result[EARLY_LABEL_COL] = 0
+
+    for pid, group in result.groupby("patient_id"):
+        sepsis_rows = group[group[LABEL_COL] == 1]
+        if len(sepsis_rows) == 0:
+            continue
+        onset_hour = sepsis_rows[TIME_COL].iloc[0]
+        early_start = onset_hour - extra_hours
+        mask = (result["patient_id"] == pid) & (result[TIME_COL] >= early_start)
+        result.loc[mask, EARLY_LABEL_COL] = 1
+
+    return result
+
+
 def build_feature_matrix(
     df: pd.DataFrame,
+    use_early_label: bool = False,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Assemble the final feature matrix and label vector.
 
@@ -287,8 +311,12 @@ def build_feature_matrix(
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)
 
-    y = enriched[LABEL_COL].copy()
-    X = enriched.drop(columns=[c for c in _DROP_COLS if c in enriched.columns])
+    # Use early_label for training if requested and available
+    label_col = EARLY_LABEL_COL if (use_early_label and EARLY_LABEL_COL in enriched.columns) else LABEL_COL
+    y = enriched[label_col].copy()
+
+    drop_cols = _DROP_COLS | {EARLY_LABEL_COL}
+    X = enriched.drop(columns=[c for c in drop_cols if c in enriched.columns])
 
     # Fill any remaining NaN in derived features (rolling stats on sparse
     # labs, hours_since sentinel values, etc.) so all models can consume X.

@@ -116,8 +116,9 @@ def _train_fold(
     df_train = df.iloc[train_idx].reset_index(drop=True)
     df_val = df.iloc[val_idx].reset_index(drop=True)
 
-    X_train_raw, y_train = build_feature_matrix(df_train)
-    X_val_raw, y_val = build_feature_matrix(df_val)
+    # Train on early_label (extended window), evaluate on SepsisLabel (original)
+    X_train_raw, y_train = build_feature_matrix(df_train, use_early_label=True)
+    X_val_raw, y_val = build_feature_matrix(df_val, use_early_label=False)
 
     # ── Oversample sepsis rows in training set ────────────────────────────
     # Duplicate sepsis rows to reach ~1:3 ratio (sepsis:non-sepsis)

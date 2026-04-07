@@ -109,9 +109,17 @@ def run() -> None:
         save_processed(raw_df, "raw_data")
 
     # ── 2. Impute missing values ────────────────────────────────────────────
-    print("\n[Step 2/5] Running imputation ...")
+    print("\n[Step 2/4] Running imputation ...")
     imputed_df = impute(raw_df)
     save_processed(imputed_df, "imputed_data")
+
+    # ── 2b. Create early label for training ────────────────────────────────
+    print("  Creating early_label (extended positive window for training) ...")
+    from src.features import create_early_label
+    imputed_df = create_early_label(imputed_df)
+    n_early = int(imputed_df["early_label"].sum())
+    n_orig = int(imputed_df["SepsisLabel"].sum())
+    print(f"  SepsisLabel=1 rows: {n_orig:,}, early_label=1 rows: {n_early:,} ({n_early/n_orig:.1f}x)")
 
     # ── 3. Patient-level cross-validation (ALL metrics come from here) ────
     print("\n[Step 3/4] Running patient-level cross-validation ...")

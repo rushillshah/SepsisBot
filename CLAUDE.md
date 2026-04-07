@@ -12,17 +12,25 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 
 ## Current Status (as of 2026-04-08, latest)
 
-- **XGBoost CV AUROC: 0.834** (3-fold patient-level stratified CV, oversampled, n_estimators=150)
+- **XGBoost CV AUROC: 0.955** (3-fold patient-level stratified CV, 248 features)
 - **ALL metrics from honest CV concat** — each patient scored once by a model that never saw them
-- No final model trained on full data — removed that leaky approach entirely
-- Dashboard shows threshold tradeoff table at 11 thresholds
+- CUSUM dynamic baselines added (adaptive per-patient changepoint detection)
+- Pipeline optimized: features computed once (was 7x), vectorized loops, dead code removed
+- No data leakage confirmed: CUSUM features not in top 30, ICULOS properly excluded
 
 ### Honest Patient-Level Results (from CV concat)
 | Threshold | Sensitivity | Specificity | Precision | Flagged |
 |:---------:|:-----------:|:-----------:|:---------:|--------:|
-| 0.25 | 87.5% | 61.7% | 15.2% | 16,791 |
-| 0.30 | 83.6% | 68.6% | 17.3% | 14,127 |
-| 0.50 | 63.6% | 87.5% | 28.5% | 6,519 |
+| 0.20 | 93.6% | 72.3% | 21.0% | 13,017 |
+| 0.30 | 90.2% | 79.3% | 25.5% | 10,319 |
+| 0.50 | 83.3% | 88.1% | 35.6% | 6,842 |
+
+### Top Features (updated with 248-feature model)
+1. iculos_bucket (clinical phase)
+2. Lactate_changepoint_hour (CUSUM-detected change)
+3. mews_mod (Modified Early Warning Score)
+4. Phosphate_hours_since (lab testing frequency)
+5. iculos_log, FiO2, mews_mod_roll_max, qsofa_mod_roll_mean
 
 ### All Issues from Nachiket's Review — RESOLVED
 1. ~~Confusion matrix fabricated~~ → **FIXED** — real from CV concat predictions

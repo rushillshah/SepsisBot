@@ -57,7 +57,7 @@ EXCLUDED_FEATURES = ["Unit1", "Unit2", "HospAdmTime", "ICULOS"]
 XGBOOST_PARAM_GRID_V2 = {
     "max_depth": [3, 4, 5],
     "learning_rate": [0.01, 0.05, 0.1],
-    "n_estimators": [100, 300, 500],
+    "n_estimators": [50, 100, 150],
     "min_child_weight": [5, 10, 20],
     "gamma": [0.1, 0.5, 1.0],
     "reg_alpha": [0.1, 1.0],

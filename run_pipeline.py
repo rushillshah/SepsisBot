@@ -110,8 +110,12 @@ def run() -> None:
 
     # ── 2. Impute missing values ────────────────────────────────────────────
     print("\n[Step 2/4] Running imputation ...")
-    imputed_df = impute(raw_df)
-    save_processed(imputed_df, "imputed_data")
+    try:
+        imputed_df = load_processed("imputed_data")
+        print(f"  Loaded cached imputed data: {len(imputed_df):,} rows")
+    except FileNotFoundError:
+        imputed_df = impute(raw_df)
+        save_processed(imputed_df, "imputed_data")
 
     # ── 2b. Create early label for training ────────────────────────────────
     print("  Creating early_label (extended positive window for training) ...")

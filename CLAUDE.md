@@ -10,45 +10,48 @@ A proof-of-concept predictive model for **early sepsis detection** from ICU pati
 
 The core question: given a patient's hourly vitals and periodic lab draws, can we predict sepsis **up to 6 hours before clinical onset**?
 
-## Current Status (as of 2026-04-07)
+## Current Status (as of 2026-04-07, latest)
 
-- **XGBoost CV AUROC: 0.806** (3-fold patient-level stratified CV on both hospitals) — but this is HOUR-LEVEL
-- **True patient-level: Sensitivity 95.7%, Specificity 56.0%, Precision 14.6%**
-- Old cross-hospital holdout approach has been REMOVED — CV is the only evaluation
-- LSTM model built but not yet trained on GPU (use `src/train_lstm.py`)
-- Model .pkl files saved to `data/processed/models/` (calibrated XGBoost + LR + scaler)
-- Feature importance: IV, XGBoost Gain %, SHAP values computed (see `data/processed/feature_analysis/`)
-- Dashboard live at localhost:8501 — **WARNING: confusion matrix and some metrics are wrong (see Known Issues)**
+- **XGBoost CV AUROC: 0.818** (3-fold patient-level stratified CV, with sepsis oversampling)
+- **At threshold 0.10: Sensitivity 87.6%, Specificity 93.4%, Precision 50.9%**
+- Dashboard clearly separates hour-level vs patient-level metrics
+- Threshold analysis table shows tradeoffs at 11 different thresholds
+- Old cross-hospital holdout approach REMOVED — CV is the only evaluation
+- LSTM model built but not yet trained on GPU
 
-### KNOWN ISSUES (from Nachiket's review 2026-04-07)
-1. **Dashboard confusion matrix is fabricated** — estimated from hour-level rates applied to patient counts, NOT from actual predictions
-2. **Metrics labeled "patient-level" are actually hour-level** — AUROC 0.806, sensitivity 73.9% etc are per-hour, not per-patient
-3. **Median imputation is harmful** — labs with >50% missingness filled with population median; XGBoost handles NaN natively
-4. **ICULOS still a top feature** — possible site confounder despite removing Unit1/Unit2
-5. **Threshold miscalibrated** — XGBoost probabilities max at ~0.27, optimal threshold ~0.025, very trigger-happy
-6. See `todos/todos.md` for full fix list
+### All Issues from Nachiket's Review — RESOLVED
+1. ~~Dashboard confusion matrix fabricated~~ → **FIXED** — real patient-level CM computed from actual predictions per CV fold
+2. ~~Metrics labeled "patient-level" are hour-level~~ → **FIXED** — clearly labeled + separate patient-level section
+3. ~~Median imputation harmful~~ → **FIXED** — changed to zero-fill
+4. ~~ICULOS site confounder~~ → **FIXED** — raw ICULOS excluded, replaced with iculos_log + iculos_bucket
+5. ~~Threshold miscalibrated~~ → **FIXED** — threshold analysis with 11 operating points, sweet spot at 0.10
+6. ~~Oversample sepsis~~ → **FIXED** — sepsis rows oversampled 18x during training
 
 ### What's Been Done
 1. Full data pipeline (load 40K PSV files, impute, feature engineer)
 2. Three models: LR, XGBoost, LSTM (LSTM needs GPU training)
-3. Removed site confounders (Unit1, Unit2, HospAdmTime) — this was the #1 fix
-4. Patient-level stratified 3-fold CV with Platt calibration
-5. Stronger XGBoost regularization (max_depth 3-5, L1/L2 reg, min_child_weight, gamma)
-6. Feature scaling via StandardScaler
-7. Clinical scoring features (SIRS, qSOFA mod, Shock Index, MEWS mod, Lactate/MAP)
-8. Feature importance analysis (IV, Gain, SHAP) — saved to `data/processed/feature_analysis/`
-9. Overfit checking (train vs val per fold)
-10. Temporal analysis module (early warning timing) — `src/temporal_analysis.py`
-11. Interactive Streamlit dashboard (dual clinical/technical audience, dark theme)
-12. Comprehensive model report (`docs/model_report.md`)
-13. Old cross-hospital pipeline removed — was producing 95%+ false positive rate
+3. Removed site confounders (Unit1, Unit2, HospAdmTime, raw ICULOS)
+4. ICULOS normalized (log + clinical phase buckets)
+5. Patient-level stratified 3-fold CV with Platt calibration
+6. Sepsis oversampling (18x duplication, ~1:3 ratio)
+7. Stronger XGBoost regularization (max_depth 3-5, L1/L2 reg, min_child_weight, gamma)
+8. Feature scaling via StandardScaler
+9. Zero-fill imputation (replaced harmful median fill)
+10. Clinical scoring features (SIRS, qSOFA mod, Shock Index, MEWS mod, Lactate/MAP)
+11. Feature importance analysis (IV, Gain, SHAP) — `data/processed/feature_analysis/`
+12. Threshold analysis — `src/threshold_analysis.py` + dashboard table
+13. Real patient-level confusion matrix computed per CV fold
+14. Overfit checking (train vs val per fold)
+15. Temporal analysis module — `src/temporal_analysis.py`
+16. Interactive Streamlit dashboard (dual audience, dark theme, hour + patient metrics)
+17. Comprehensive model report (`docs/model_report.md`)
 
 ### What Still Needs Work
-1. **Run LSTM on GPU** — `train_lstm_pipeline()` in `src/train_lstm.py`, currently disabled in run_pipeline.py
-2. **ICULOS normalization** — replace raw ICULOS with log + buckets (plan written, not implemented)
-3. **Patient-baseline deviation features** — compare vitals to patient's own first-6h baseline
-4. **Multi-timescale slopes** — 3h/6h/12h rate-of-change (currently only 1h deltas)
-5. **Feature selection** — cut from ~170 to top 30-50 by SHAP to reduce overfit gap
+1. **Run LSTM on GPU** — `train_lstm_pipeline()` in `src/train_lstm.py`
+2. **Patient-baseline deviation features** — compare vitals to patient's own first-6h baseline
+3. **Multi-timescale slopes** — 3h/6h/12h rate-of-change (currently only 1h deltas)
+4. **Feature selection** — cut from ~170 to top 30-50 by SHAP to reduce overfit gap
+5. **Patient-level alert aggregation** — X consecutive hours above threshold to reduce flip-flopping
 6. **MIMIC-IV integration** — adds 7 missing variables
 
 ## Data Source

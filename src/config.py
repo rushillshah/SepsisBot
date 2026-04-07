@@ -38,10 +38,7 @@ ROLLING_WINDOW_HOURS = 6
 ROLLING_STATS = ["mean", "min", "max", "std"]
 CLINICAL_SCORE_COLS = ["sirs_score", "qsofa_mod", "shock_index", "mews_mod", "lactate_map_ratio"]
 
-DYNAMIC_BASELINE_FEATURES = [
-    "HR", "Resp", "SBP", "MAP", "O2Sat", "Temp",
-    "Lactate", "WBC", "Creatinine", "Platelets", "BUN",
-]
+DYNAMIC_BASELINE_FEATURES = VITAL_COLS + LAB_COLS
 DYNAMIC_DEVIATION_COLS = [f"{v}_dynamic_dev" for v in DYNAMIC_BASELINE_FEATURES]
 CUSUM_SLACK = 0.5
 CUSUM_THRESHOLD = 4.0

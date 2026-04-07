@@ -1,30 +1,29 @@
 # Todos — Sepsis Model
 
-## Resolved (2026-04-07)
+## Resolved
 
-- [x] ~~Fix confusion matrix (fabricated)~~ → Real patient-level CM from actual predictions
-- [x] ~~Fix metric labels (hour vs patient)~~ → Dashboard clearly separates both
-- [x] ~~Fix median imputation~~ → Changed to zero-fill
-- [x] ~~Oversample sepsis~~ → 18x oversampling during training
-- [x] ~~ICULOS confounder~~ → Excluded raw, replaced with log + bucket
-- [x] ~~Configurable thresholds~~ → Threshold analysis table + plot in dashboard
-- [x] ~~Remove old cross-hospital pipeline~~ → CV-only evaluation
+- [x] Confusion matrix fabricated → Real from CV concat predictions
+- [x] Metrics labeled wrong (hour vs patient) → Clearly separated
+- [x] Median imputation harmful → Zero-fill
+- [x] Oversampling → 18x sepsis oversampling
+- [x] ICULOS confounder → Excluded raw, replaced with log + bucket
+- [x] Configurable thresholds → Threshold table at 11 points
+- [x] Remove old cross-hospital pipeline → CV only
+- [x] Final model scored training data → Removed, all metrics from CV concat
+- [x] n_estimators too high → Capped at 150, AUROC improved to 0.834
 
 ## Remaining
 
-- [ ] Patient-level alert aggregation — add persistence logic (X consecutive hours above threshold) to reduce alarm fatigue from hour-level score flipping. Module built (`src/threshold_analysis.py:consecutive_hour_alerts`), not yet in dashboard.
+- [ ] Patient-level alert aggregation — X consecutive hours above threshold to reduce flip-flopping. Module built (`src/threshold_analysis.py:consecutive_hour_alerts`), not in dashboard.
 - [ ] Patient-baseline deviation features — compare vitals to patient's own first-6h baseline
 - [ ] Multi-timescale slopes — 3h/6h/12h rate-of-change (currently only 1h deltas)
 - [ ] Feature selection — cut from ~170 to top 30-50 by SHAP to reduce overfit gap
-- [ ] Run LSTM on GPU — `src/train_lstm.py`, needs proper GPU
-- [ ] MIMIC-IV integration — adds 7 missing variables (urine output, procalcitonin, CRP, INR, vasopressors, vent status, albumin)
+- [ ] Run LSTM on GPU — `src/train_lstm.py`
+- [ ] MIMIC-IV integration — adds 7 missing variables
 
-## Current Best Results
+## Current Best Results (Honest, from CV Concat)
 
-**XGBoost CV AUROC: 0.818** (3-fold, oversampled, ICULOS normalized)
+**Hour-Level AUROC: 0.834**
 
-At threshold 0.10 (patient-level):
-- Sensitivity: 87.6%
-- Specificity: 93.4%
-- Precision: 50.9%
-- 5,030 patients flagged out of 40,111
+Patient-level at threshold 0.50: sens 63.6%, spec 87.5%, prec 28.5%
+Patient-level at threshold 0.25: sens 87.5%, spec 61.7%, prec 15.2%

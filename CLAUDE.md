@@ -10,21 +10,28 @@ A proof-of-concept predictive model for **early sepsis detection** from ICU pati
 
 The core question: given a patient's hourly vitals and periodic lab draws, can we predict sepsis **up to 6 hours before clinical onset**?
 
-## Current Status (as of 2026-04-07, latest)
+## Current Status (as of 2026-04-08, latest)
 
-- **XGBoost CV AUROC: 0.818** (3-fold patient-level stratified CV, with sepsis oversampling)
-- **At threshold 0.10: Sensitivity 87.6%, Specificity 93.4%, Precision 50.9%**
-- Dashboard clearly separates hour-level vs patient-level metrics
-- Threshold analysis table shows tradeoffs at 11 different thresholds
-- Old cross-hospital holdout approach REMOVED — CV is the only evaluation
-- LSTM model built but not yet trained on GPU
+- **XGBoost CV AUROC: 0.834** (3-fold patient-level stratified CV, oversampled, n_estimators=150)
+- **ALL metrics from honest CV concat** — each patient scored once by a model that never saw them
+- No final model trained on full data — removed that leaky approach entirely
+- Dashboard shows threshold tradeoff table at 11 thresholds
+
+### Honest Patient-Level Results (from CV concat)
+| Threshold | Sensitivity | Specificity | Precision | Flagged |
+|:---------:|:-----------:|:-----------:|:---------:|--------:|
+| 0.25 | 87.5% | 61.7% | 15.2% | 16,791 |
+| 0.30 | 83.6% | 68.6% | 17.3% | 14,127 |
+| 0.50 | 63.6% | 87.5% | 28.5% | 6,519 |
 
 ### All Issues from Nachiket's Review — RESOLVED
-1. ~~Dashboard confusion matrix fabricated~~ → **FIXED** — real patient-level CM computed from actual predictions per CV fold
-2. ~~Metrics labeled "patient-level" are hour-level~~ → **FIXED** — clearly labeled + separate patient-level section
-3. ~~Median imputation harmful~~ → **FIXED** — changed to zero-fill
-4. ~~ICULOS site confounder~~ → **FIXED** — raw ICULOS excluded, replaced with iculos_log + iculos_bucket
-5. ~~Threshold miscalibrated~~ → **FIXED** — threshold analysis with 11 operating points, sweet spot at 0.10
+1. ~~Confusion matrix fabricated~~ → **FIXED** — real from CV concat predictions
+2. ~~Metrics labeled patient-level but hour-level~~ → **FIXED** — clearly separated
+3. ~~Median imputation harmful~~ → **FIXED** — zero-fill
+4. ~~ICULOS confounder~~ → **FIXED** — replaced with log + bucket
+5. ~~Threshold miscalibrated~~ → **FIXED** — threshold analysis at 11 points
+6. ~~Oversampling~~ → **FIXED** — 18x sepsis oversampling
+7. ~~Final model scored training data~~ → **FIXED** — removed, all metrics from CV concat
 6. ~~Oversample sepsis~~ → **FIXED** — sepsis rows oversampled 18x during training
 
 ### What's Been Done

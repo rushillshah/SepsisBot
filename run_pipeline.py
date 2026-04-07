@@ -106,24 +106,27 @@ def run() -> None:
         imputed_df = impute(raw_df)
         save_processed(imputed_df, "imputed_data")
 
-    # ── 2b. Create early label for training ────────────────────────────────
-    print("  Creating early_label (extended positive window for training) ...")
+    # ── 2b. Create early label + compute features ONCE ───────────────────
+    print("  Creating early_label ...")
     from src.features import create_early_label
     imputed_df = create_early_label(imputed_df)
     n_early = int(imputed_df["early_label"].sum())
     n_orig = int(imputed_df["SepsisLabel"].sum())
-    print(f"  SepsisLabel=1 rows: {n_orig:,}, early_label=1 rows: {n_early:,} ({n_early/n_orig:.1f}x)")
+    print(f"  SepsisLabel=1: {n_orig:,}, early_label=1: {n_early:,} ({n_early/n_orig:.1f}x)")
+
+    print("  Building feature matrix (once for entire pipeline) ...")
+    X_all, y_early = build_feature_matrix(imputed_df, use_early_label=True)
+    feature_names = list(X_all.columns)
+    patient_ids = imputed_df["patient_id"].to_numpy()
+    eval_labels = imputed_df["SepsisLabel"].to_numpy()
+    print(f"  Features: {len(feature_names)}, Rows: {len(X_all):,}")
 
     # ── 3. Patient-level cross-validation (ALL metrics come from here) ────
     print("\n[Step 3/4] Running patient-level cross-validation ...")
-    cv_results = cross_validate_pipeline(imputed_df)
+    cv_results = cross_validate_pipeline(X_all, y_early.to_numpy(), patient_ids, eval_labels)
 
     last_fold = cv_results["fold_results"][-1]
     best_params = last_fold.get("xgb_best_params", {})
-
-    # Build feature matrix for IV/SHAP (read-only, no training)
-    X_full, y_full = build_feature_matrix(imputed_df)
-    feature_names = list(X_full.columns)
 
     # ── 4. Save artifacts ──────────────────────────────────────────────────
     print("\n[Step 4/4] Saving evaluation artifacts ...")
@@ -133,7 +136,8 @@ def run() -> None:
     dashboard_json = _build_dashboard_json(cv_results, None, None)
     dashboard_json["xgb_best_params"] = best_params
     dashboard_json["n_features"] = len(feature_names)
-    dashboard_json["default_threshold"] = 0.10
+    from src.config import DEFAULT_THRESHOLD
+    dashboard_json["default_threshold"] = DEFAULT_THRESHOLD
 
     # Per-fold detail for dashboard
     fold_detail = []
@@ -180,9 +184,9 @@ def run() -> None:
     # Threshold analysis from honest CV concat (already computed in cross_validate_pipeline)
     dashboard_json["threshold_analysis"] = cv_results.get("threshold_analysis", [])
 
-    # Patient-level metrics at default threshold (0.10)
+    # Patient-level metrics at default threshold
     ta = cv_results.get("threshold_analysis", [])
-    t010 = [r for r in ta if abs(r["threshold"] - 0.10) < 0.001]
+    t010 = [r for r in ta if abs(r["threshold"] - DEFAULT_THRESHOLD) < 0.001]
     if t010:
         row = t010[0]
         dashboard_json["patient_sensitivity"] = row["patient_sensitivity"]

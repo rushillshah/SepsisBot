@@ -72,14 +72,14 @@ class TestPatientStratifiedSplit:
     def test_returns_correct_number_of_folds(
         self, synthetic_df: pd.DataFrame
     ) -> None:
-        folds = patient_stratified_split(synthetic_df, n_splits=3)
+        folds = patient_stratified_split(synthetic_df["patient_id"].to_numpy(), synthetic_df["SepsisLabel"].to_numpy(), n_splits=3)
         assert len(folds) == 3
 
     def test_no_patient_in_both_train_and_val(
         self, synthetic_df: pd.DataFrame
     ) -> None:
         """Patient IDs must be completely disjoint between train and val."""
-        folds = patient_stratified_split(synthetic_df, n_splits=3)
+        folds = patient_stratified_split(synthetic_df["patient_id"].to_numpy(), synthetic_df["SepsisLabel"].to_numpy(), n_splits=3)
 
         for train_idx, val_idx in folds:
             train_patients = set(synthetic_df.iloc[train_idx]["patient_id"].unique())
@@ -91,7 +91,7 @@ class TestPatientStratifiedSplit:
 
     def test_all_rows_covered(self, synthetic_df: pd.DataFrame) -> None:
         """The union of all val indices must equal the full row index set."""
-        folds = patient_stratified_split(synthetic_df, n_splits=3)
+        folds = patient_stratified_split(synthetic_df["patient_id"].to_numpy(), synthetic_df["SepsisLabel"].to_numpy(), n_splits=3)
 
         all_val_indices: set[int] = set()
         for _, val_idx in folds:
@@ -107,7 +107,7 @@ class TestPatientStratifiedSplit:
         self, synthetic_df: pd.DataFrame
     ) -> None:
         """Every training fold must contain at least one sepsis patient."""
-        folds = patient_stratified_split(synthetic_df, n_splits=3)
+        folds = patient_stratified_split(synthetic_df["patient_id"].to_numpy(), synthetic_df["SepsisLabel"].to_numpy(), n_splits=3)
 
         for fold_num, (train_idx, _) in enumerate(folds, start=1):
             train_df = synthetic_df.iloc[train_idx]

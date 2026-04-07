@@ -50,7 +50,7 @@ XGBOOST_PARAM_GRID = {
 
 # ── Features to Exclude (site-specific confounders) ────────────────────────
 
-EXCLUDED_FEATURES = ["Unit1", "Unit2", "HospAdmTime"]
+EXCLUDED_FEATURES = ["Unit1", "Unit2", "HospAdmTime", "ICULOS"]
 
 # ── Improved Model Hyperparameters ─────────────────────────────────────────
 

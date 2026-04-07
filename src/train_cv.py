@@ -116,7 +116,25 @@ def _train_fold(
     df_train = df.iloc[train_idx].reset_index(drop=True)
     df_val = df.iloc[val_idx].reset_index(drop=True)
 
-    X_train_raw, y_train = build_feature_matrix(df_train)
+    # ── Undersample non-sepsis patients in training set ───────────────────
+    # Keep ALL sepsis patients, randomly sample non-sepsis to ~3:1 ratio
+    train_pids = df_train.groupby("patient_id")[LABEL_COL].max()
+    sepsis_pids = train_pids[train_pids == 1].index.tolist()
+    nonsepsis_pids = train_pids[train_pids == 0].index.tolist()
+
+    # Target: 3x non-sepsis patients per sepsis patient
+    n_keep = min(len(nonsepsis_pids), len(sepsis_pids) * 3)
+    rng = np.random.RandomState(RANDOM_STATE + fold_num)
+    sampled_nonsepsis = rng.choice(nonsepsis_pids, size=n_keep, replace=False).tolist()
+
+    keep_pids = set(sepsis_pids + sampled_nonsepsis)
+    df_train_balanced = df_train[df_train["patient_id"].isin(keep_pids)].reset_index(drop=True)
+
+    n_sep = len(sepsis_pids)
+    n_nonsep_orig = len(nonsepsis_pids)
+    print(f"    Undersampled: {n_sep} sepsis + {n_keep}/{n_nonsep_orig} non-sepsis patients")
+
+    X_train_raw, y_train = build_feature_matrix(df_train_balanced)
     X_val_raw, y_val = build_feature_matrix(df_val)
 
     X_train, X_val, _ = scale_features(X_train_raw, X_val_raw)

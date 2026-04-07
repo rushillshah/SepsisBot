@@ -129,6 +129,28 @@ def get_feature_names(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in _DROP_COLS]
 
 
+def add_iculos_normalized(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace raw ICULOS with log and bucket versions.
+
+    Raw ICULOS is dropped (added to EXCLUDED_FEATURES in config).
+    Two replacements:
+    - iculos_log: log(ICULOS + 1), compresses 1-336h range
+    - iculos_bucket: 0=0-6h, 1=6-24h, 2=24-72h, 3=72h+ (clinical phases)
+    """
+    result = df.copy()
+    iculos = result.get(TIME_COL, pd.Series(dtype=float))
+
+    result["iculos_log"] = np.log1p(iculos).fillna(0)
+    result["iculos_bucket"] = pd.Series(np.select(
+        [iculos <= 6, (iculos > 6) & (iculos <= 24),
+         (iculos > 24) & (iculos <= 72), iculos > 72],
+        [0, 1, 2, 3],
+        default=0,
+    ), index=result.index, dtype=float)
+
+    return result
+
+
 def _mews_hr(hr: pd.Series) -> pd.Series:
     """MEWS heart rate component: 0-3."""
     return pd.Series(np.select(
@@ -260,7 +282,8 @@ def build_feature_matrix(
             "Ensure the raw data has been loaded correctly."
         )
 
-    enriched = add_clinical_scores(df)
+    enriched = add_iculos_normalized(df)
+    enriched = add_clinical_scores(enriched)
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)
 

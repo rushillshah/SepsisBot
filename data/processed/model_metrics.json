@@ -45,16 +45,16 @@
     }
   ],
   "confusion_matrix": {
-    "tp": 2813,
-    "fn": 109,
-    "fp": 28318,
-    "tn": 8871,
+    "tp": 2559,
+    "fn": 363,
+    "fp": 2471,
+    "tn": 34718,
     "total_patients": 40111,
     "actual_sepsis": 2922
   },
-  "patient_sensitivity": 0.9626851644572826,
-  "patient_specificity": 0.2384673088006949,
-  "patient_precision": 0.09110664464522167,
+  "patient_sensitivity": 0.8757700205338809,
+  "patient_specificity": 0.9335556212858641,
+  "patient_precision": 0.5087475149105368,
   "feature_ranking": [
     {
       "feature": "iculos_log",
@@ -75485,5 +75485,6 @@
     "DBP_roll_min": 0.5861017107963562,
     "SBP_roll_min": 0.6709727048873901,
     "PaCO2": 0.40367114543914795
-  }
+  },
+  "default_threshold": 0.1
 }

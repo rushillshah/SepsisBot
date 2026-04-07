@@ -268,35 +268,42 @@ def page_executive_summary():
     if metrics is not None:
         st.markdown("### Current Model Performance (Patient-Level CV)")
 
-        c1, c2, c3 = st.columns(3)
-        auroc = metrics.get("cv_xgb_auroc", metrics.get("auroc", 0))
-        sens = metrics.get("cv_xgb_sensitivity", metrics.get("sensitivity", 0))
-        spec = metrics.get("cv_xgb_specificity", metrics.get("specificity", 0))
+        auroc = metrics.get("cv_xgb_auroc", 0)
         auroc_std = metrics.get("cv_xgb_auroc_std", 0)
+        p_sens = metrics.get("patient_sensitivity", 0)
+        p_spec = metrics.get("patient_specificity", 0)
+        p_prec = metrics.get("patient_precision", 0)
+        threshold = metrics.get("default_threshold", 0.10)
 
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric(
-            "AUROC (XGBoost CV)",
-            f"{auroc:.3f} +/- {auroc_std:.3f}",
+            "AUROC",
+            f"{auroc:.3f}",
             delta="Above 0.80 target" if auroc >= 0.80 else "Below 0.80 target",
             delta_color="normal" if auroc >= 0.80 else "inverse",
         )
         c2.metric(
-            "Sepsis Detection Rate",
-            f"{sens:.0%}",
-            help="Of patients who actually had sepsis, how many did the model flag? (3-fold CV average)",
+            "Sepsis Detection",
+            f"{p_sens:.0%}",
+            help=f"Of patients who actually had sepsis, how many did the model catch? (threshold={threshold})",
         )
         c3.metric(
-            "Specificity",
-            f"{spec:.0%}",
-            help="Of patients who did NOT have sepsis, how many were correctly left alone?",
+            "False Alarm Rate",
+            f"{1 - p_spec:.0%}",
+            help=f"Of non-sepsis patients, how many were incorrectly flagged? (threshold={threshold})",
+        )
+        c4.metric(
+            "Alert Precision",
+            f"{p_prec:.0%}",
+            help=f"Of all patients flagged, what % actually had sepsis? (threshold={threshold})",
         )
 
         explain(
             clinical=(
-                f"<b>In plain English:</b> The model correctly identifies about <b>{sens:.0%} of sepsis cases</b> "
-                f"with an overall discriminative ability (AUROC) of <b>{auroc:.2f}</b>. "
-                f"These results come from 3-fold patient-level cross-validation on both hospitals combined — "
-                f"no patient appears in both training and testing."
+                f"<b>At threshold {threshold}:</b> The model catches <b>{p_sens:.0%} of sepsis patients</b>, "
+                f"with a false alarm rate of <b>{1 - p_spec:.0%}</b>. "
+                f"Of everyone flagged, <b>{p_prec:.0%} actually had sepsis</b>. "
+                f"These are patient-level metrics from 3-fold cross-validation."
             ),
             technical=(
                 f"<b>CV AUROC: {auroc:.3f} +/- {auroc_std:.3f}</b> (3-fold patient-level stratified CV). "

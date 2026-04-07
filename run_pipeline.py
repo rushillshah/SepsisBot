@@ -113,110 +113,74 @@ def run() -> None:
     imputed_df = impute(raw_df)
     save_processed(imputed_df, "imputed_data")
 
-    # ── 3. Patient-level cross-validation ──────────────────────────────────
-    print("\n[Step 3/5] Running patient-level cross-validation ...")
+    # ── 3. Patient-level cross-validation (ALL metrics come from here) ────
+    print("\n[Step 3/4] Running patient-level cross-validation ...")
     cv_results = cross_validate_pipeline(imputed_df)
 
-    # Save the best XGBoost model from last fold as .pkl
     last_fold = cv_results["fold_results"][-1]
-    models_dir = DATA_PROCESSED / "models"
-    models_dir.mkdir(parents=True, exist_ok=True)
+    best_params = last_fold.get("xgb_best_params", {})
 
-    # The CV pipeline doesn't return fitted models currently —
-    # train a final model on ALL data with best params from CV
-    print("\n  Training final model on full dataset ...")
-    from src.features import scale_features
+    # Build feature matrix for IV/SHAP (read-only, no training)
     X_full, y_full = build_feature_matrix(imputed_df)
     feature_names = list(X_full.columns)
 
-    # Use best params from last fold
-    best_params = last_fold.get("xgb_best_params", {})
-
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.calibration import CalibratedClassifierCV
-    from xgboost import XGBClassifier
-    from src.config import RANDOM_STATE
-
-    n_pos = int(np.sum(y_full == 1))
-    n_neg = int(np.sum(y_full == 0))
-    scale_pos_weight = n_neg / n_pos if n_pos > 0 else 1.0
-
-    # Scale features
-    from sklearn.preprocessing import StandardScaler
-    scaler = StandardScaler()
-    X_full_scaled = scaler.fit_transform(X_full)
-
-    # Train LR
-    lr_model = LogisticRegression(
-        C=1.0, class_weight="balanced", max_iter=2000,
-        random_state=RANDOM_STATE, solver="lbfgs",
-    )
-    lr_model.fit(X_full_scaled, y_full)
-
-    # Train XGBoost with best params
-    xgb_model = XGBClassifier(
-        eval_metric="logloss",
-        scale_pos_weight=scale_pos_weight,
-        random_state=RANDOM_STATE,
-        **best_params,
-    )
-    xgb_model.fit(X_full_scaled, y_full)
-
-    # Calibrate
-    calibrated_xgb = CalibratedClassifierCV(
-        estimator=xgb_model, method="sigmoid", cv=3,
-    )
-    calibrated_xgb.fit(X_full_scaled, y_full)
-
-    joblib.dump(calibrated_xgb, models_dir / "xgboost_model.pkl")
-    joblib.dump(lr_model, models_dir / "logistic_model.pkl")
-    joblib.dump(scaler, models_dir / "scaler.pkl")
-    print(f"  Saved model .pkl files to {models_dir}")
-
-    # ── 4. Feature Importance Analysis ────────────────────────────────────
-    print("\n[Step 4/5] Running feature importance analysis ...")
-
-    # IV on full data
-    print("  Computing Information Value ...")
-    iv_df = compute_information_value(X_full, y_full)
-
-    # Gain % (use raw xgb, not calibrated)
-    print("  Computing XGBoost Gain % ...")
-    gain_df = compute_gain_importance(xgb_model, feature_names)
-
-    # SHAP (sample 10K)
-    print("  Computing SHAP values (10K sample) ...")
-    sample_idx = np.random.RandomState(42).choice(
-        len(X_full), size=min(10_000, len(X_full)), replace=False,
-    )
-    X_sample = X_full.iloc[sample_idx]
-    shap_df = compute_shap_values(
-        xgb_model, X_sample, feature_names, save_dir=str(DATA_PROCESSED),
-    )
-
-    # Combined ranking
-    print("  Building combined ranking ...")
-    ranking_df = combined_feature_ranking(iv_df, gain_df, shap_df, top_n=30)
-    print(ranking_df.head(15).to_string(index=False))
-
-    # ── 5. Save artifacts ──────────────────────────────────────────────────
-    print("\n[Step 5/5] Saving evaluation artifacts ...")
+    # ── 4. Save artifacts ──────────────────────────────────────────────────
+    print("\n[Step 4/4] Saving evaluation artifacts ...")
     DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
-    dashboard_json = _build_dashboard_json(cv_results, ranking_df, iv_df)
+    # Dashboard JSON — all metrics from CV concatenated predictions
+    dashboard_json = _build_dashboard_json(cv_results, None, None)
     dashboard_json["xgb_best_params"] = best_params
     dashboard_json["n_features"] = len(feature_names)
+    dashboard_json["default_threshold"] = 0.10
 
-    # Add ROC data from last CV fold
-    last_y_val = last_fold["y_val"]
-    last_xgb_prob = last_fold["xgb_prob"]
-    last_lr_prob = last_fold["lr_prob"]
-    fpr_xgb, tpr_xgb, _ = roc_curve(last_y_val, last_xgb_prob)
-    fpr_lr, tpr_lr, _ = roc_curve(last_y_val, last_lr_prob)
-    dashboard_json["fpr"] = fpr_xgb.tolist()
-    dashboard_json["tpr"] = tpr_xgb.tolist()
-    dashboard_json["lr_fpr"] = fpr_lr.tolist()
-    dashboard_json["lr_tpr"] = tpr_lr.tolist()
+    # Threshold analysis from honest CV concat (already computed in cross_validate_pipeline)
+    dashboard_json["threshold_analysis"] = cv_results.get("threshold_analysis", [])
+
+    # Patient-level metrics at default threshold (0.10)
+    ta = cv_results.get("threshold_analysis", [])
+    t010 = [r for r in ta if abs(r["threshold"] - 0.10) < 0.001]
+    if t010:
+        row = t010[0]
+        dashboard_json["patient_sensitivity"] = row["patient_sensitivity"]
+        dashboard_json["patient_specificity"] = row["patient_specificity"]
+        dashboard_json["patient_precision"] = row["patient_precision"]
+        dashboard_json["confusion_matrix"] = {
+            "tp": row["tp"], "fn": row["fn"], "fp": row["fp"], "tn": row["tn"],
+            "total_patients": row["total_patients"],
+            "actual_sepsis": row["tp"] + row["fn"],
+        }
+
+    # ROC curve from concatenated CV predictions
+    concat = cv_results.get("concat_predictions", {})
+    if "xgb_probs" in concat:
+        all_y = concat["labels"]
+        all_xgb_p = concat["xgb_probs"]
+        all_lr_p = concat["lr_probs"]
+        fpr_xgb, tpr_xgb, _ = roc_curve(all_y, all_xgb_p)
+        fpr_lr, tpr_lr, _ = roc_curve(all_y, all_lr_p)
+        dashboard_json["fpr"] = fpr_xgb.tolist()
+        dashboard_json["tpr"] = tpr_xgb.tolist()
+        dashboard_json["lr_fpr"] = fpr_lr.tolist()
+        dashboard_json["lr_tpr"] = tpr_lr.tolist()
+
+    # Feature importance from existing feature_analysis files (no recompute)
+    import os
+    fa_dir = DATA_PROCESSED / "feature_analysis"
+    if (fa_dir / "shap_ranking.csv").exists():
+        import pandas as pd
+        shap_df = pd.read_csv(fa_dir / "shap_ranking.csv")
+        gain_path = fa_dir / "gain_ranking.csv"
+        gain_df = pd.read_csv(gain_path) if gain_path.exists() else None
+        fi = {}
+        if gain_df is not None:
+            for _, r in gain_df.head(30).iterrows():
+                fi[r["feature"]] = float(r["gain_pct"])
+        else:
+            for _, r in shap_df.head(30).iterrows():
+                fi[r["feature"]] = float(r["mean_abs_shap"])
+        dashboard_json["feature_importance"] = fi
+        dashboard_json["feature_ranking"] = shap_df.head(30).to_dict(orient="records")
 
     metrics_path = DATA_PROCESSED / "model_metrics.json"
     with open(metrics_path, "w") as f:

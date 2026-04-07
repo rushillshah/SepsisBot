@@ -242,6 +242,8 @@ def _train_fold(
         "lr_train_auroc": float(lr_train_auroc),
         "xgb_train_auroc": float(xgb_train_auroc),
         "xgb_patient_cm": xgb_patient_cm,
+        "val_patient_ids": val_pids,
+        "val_labels": val_labels,
     }
 
 
@@ -304,6 +306,28 @@ def cross_validate_pipeline(df: pd.DataFrame) -> dict:
         for k in total_cm:
             total_cm[k] += r["xgb_patient_cm"][k]
 
+    # ── Concatenate all fold predictions (honest, each patient scored once) ──
+    all_patient_ids = np.concatenate([r["val_patient_ids"] for r in fold_results])
+    all_labels = np.concatenate([r["val_labels"] for r in fold_results])
+    all_xgb_probs = np.concatenate([r["xgb_prob"] for r in fold_results])
+    all_lr_probs = np.concatenate([r["lr_prob"] for r in fold_results])
+
+    # Patient-level threshold analysis on concatenated CV predictions
+    from src.threshold_analysis import patient_level_at_thresholds, plot_threshold_tradeoff
+    concat_df = pd.DataFrame({
+        "patient_id": all_patient_ids,
+        LABEL_COL: all_labels,
+    })
+    thresholds = [0.01, 0.02, 0.03, 0.05, 0.07, 0.10, 0.15, 0.20, 0.25, 0.30, 0.50]
+    threshold_table = patient_level_at_thresholds(concat_df, all_xgb_probs, thresholds)
+
+    print("\n  THRESHOLD ANALYSIS (from concatenated CV predictions — honest)")
+    print(threshold_table[["threshold", "patient_sensitivity", "patient_specificity", "patient_precision", "total_flagged"]].to_string(index=False))
+
+    # Save threshold plot
+    from src.config import DATA_PROCESSED
+    plot_threshold_tradeoff(threshold_table, save_path=str(DATA_PROCESSED / "threshold_tradeoff.png"))
+
     _print_summary(avg_xgb_metrics, avg_lr_metrics, overfit_table, avg_patient_cm)
 
     return {
@@ -313,6 +337,13 @@ def cross_validate_pipeline(df: pd.DataFrame) -> dict:
         "overfit_table": overfit_table,
         "avg_patient_metrics": avg_patient_cm,
         "total_patient_cm": total_cm,
+        "threshold_analysis": threshold_table.to_dict(orient="records"),
+        "concat_predictions": {
+            "patient_ids": all_patient_ids,
+            "labels": all_labels,
+            "xgb_probs": all_xgb_probs,
+            "lr_probs": all_lr_probs,
+        },
     }
 
 

@@ -15,9 +15,11 @@ from sklearn.preprocessing import StandardScaler
 
 from src.config import (
     ALL_FEATURE_COLS,
-    BASELINE_VITALS,
     CLINICAL_SCORE_COLS,
+    CUSUM_SLACK,
+    CUSUM_THRESHOLD,
     DEMOGRAPHIC_COLS,
+    DYNAMIC_BASELINE_FEATURES,
     EARLY_LABEL_COL,
     EARLY_LABEL_EXTRA_HOURS,
     EXCLUDED_FEATURES,
@@ -132,25 +134,74 @@ def get_feature_names(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in _DROP_COLS]
 
 
-def add_baseline_deviations(df: pd.DataFrame) -> pd.DataFrame:
-    """Compute per-patient deviation from their own first-6h baseline.
+def _cusum_changepoint(values: np.ndarray, k: float = CUSUM_SLACK, h: float = CUSUM_THRESHOLD) -> int:
+    """Find the CUSUM changepoint index in a 1D array of non-NaN values.
 
-    For each vital in BASELINE_VITALS, adds {vital}_baseline_dev =
-    current value - mean(first 6 hours for this patient). Separates
-    'sick but stable' (low deviation) from 'sick and deteriorating'
-    (high deviation).
+    Returns the index of the first value where the cumulative sum
+    exceeds the threshold h. Returns len(values) if no change detected.
+    """
+    if len(values) < 6:
+        return len(values)  # not enough data for baseline
+
+    mu = np.mean(values[:6])
+    sigma = np.std(values[:6])
+    if sigma == 0:
+        sigma = 1.0
+
+    s_high = 0.0
+    s_low = 0.0
+    for i in range(6, len(values)):
+        z = (values[i] - mu) / sigma
+        s_high = max(0.0, s_high + z - k)
+        s_low = max(0.0, s_low - z - k)
+        if s_high > h or s_low > h:
+            return i
+    return len(values)
+
+
+def add_dynamic_baselines(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute per-patient deviation from CUSUM-detected stable baseline.
+
+    For each feature in DYNAMIC_BASELINE_FEATURES, uses CUSUM change
+    detection to find the changepoint — the hour where the feature starts
+    deviating from normal. Baseline = mean of pre-changepoint values.
+    Deviation = current value - baseline mean.
+
+    Replaces the static first-6h baseline with an adaptive one.
     """
     result = df.copy()
-    # Sort by patient + time to ensure head(6) gets first 6 hours
     sorted_df = result.sort_values(["patient_id", TIME_COL])
-    for vital in BASELINE_VITALS:
-        if vital not in result.columns:
+
+    for feature in DYNAMIC_BASELINE_FEATURES:
+        if feature not in result.columns:
             continue
-        # Compute mean of first 6 rows per patient
-        baselines = sorted_df.groupby("patient_id").head(6).groupby("patient_id")[vital].mean()
-        # Map back and compute deviation
-        result[f"{vital}_baseline_dev"] = result[vital] - result["patient_id"].map(baselines)
-        result[f"{vital}_baseline_dev"] = result[f"{vital}_baseline_dev"].fillna(0.0)
+
+        # Per-patient CUSUM: find changepoint, compute baseline mean
+        baselines = {}
+        changepoints = {}
+        baseline_lengths = {}
+
+        for pid, group in sorted_df.groupby("patient_id"):
+            values = group[feature].dropna().values
+            if len(values) == 0:
+                baselines[pid] = 0.0
+                changepoints[pid] = 0
+                baseline_lengths[pid] = 0
+                continue
+
+            cp = _cusum_changepoint(values)
+            baseline_vals = values[:cp]
+            baselines[pid] = float(np.mean(baseline_vals)) if len(baseline_vals) > 0 else 0.0
+            changepoints[pid] = int(group[TIME_COL].iloc[min(cp, len(group) - 1)])
+            baseline_lengths[pid] = len(baseline_vals)
+
+        # Map back to full DataFrame
+        result[f"{feature}_dynamic_dev"] = (
+            result[feature] - result["patient_id"].map(baselines)
+        ).fillna(0.0)
+        result[f"{feature}_changepoint_hour"] = result["patient_id"].map(changepoints).fillna(0).astype(float)
+        result[f"{feature}_baseline_length"] = result["patient_id"].map(baseline_lengths).fillna(0).astype(float)
+
     return result
 
 
@@ -328,7 +379,7 @@ def build_feature_matrix(
 
     enriched = add_iculos_normalized(df)
     enriched = add_clinical_scores(enriched)
-    enriched = add_baseline_deviations(enriched)
+    enriched = add_dynamic_baselines(enriched)
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)
 

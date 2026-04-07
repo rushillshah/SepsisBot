@@ -38,10 +38,15 @@ ROLLING_WINDOW_HOURS = 6
 ROLLING_STATS = ["mean", "min", "max", "std"]
 CLINICAL_SCORE_COLS = ["sirs_score", "qsofa_mod", "shock_index", "mews_mod", "lactate_map_ratio"]
 
-BASELINE_VITALS = ["HR", "Resp", "SBP", "MAP", "O2Sat", "Temp"]
-BASELINE_DEVIATION_COLS = [f"{v}_baseline_dev" for v in BASELINE_VITALS]
+DYNAMIC_BASELINE_FEATURES = [
+    "HR", "Resp", "SBP", "MAP", "O2Sat", "Temp",
+    "Lactate", "WBC", "Creatinine", "Platelets", "BUN",
+]
+DYNAMIC_DEVIATION_COLS = [f"{v}_dynamic_dev" for v in DYNAMIC_BASELINE_FEATURES]
+CUSUM_SLACK = 0.5
+CUSUM_THRESHOLD = 4.0
 
-ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets"] + CLINICAL_SCORE_COLS + BASELINE_DEVIATION_COLS
+ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets"] + CLINICAL_SCORE_COLS + DYNAMIC_DEVIATION_COLS
 
 # ── Features to Exclude (site-specific confounders) ────────────────────────
 

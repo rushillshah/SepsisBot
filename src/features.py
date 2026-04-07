@@ -15,6 +15,7 @@ from sklearn.preprocessing import StandardScaler
 
 from src.config import (
     ALL_FEATURE_COLS,
+    BASELINE_VITALS,
     CLINICAL_SCORE_COLS,
     DEMOGRAPHIC_COLS,
     EARLY_LABEL_COL,
@@ -129,6 +130,35 @@ def get_feature_names(df: pd.DataFrame) -> list[str]:
         Column names in the same order they appear in *df*.
     """
     return [c for c in df.columns if c not in _DROP_COLS]
+
+
+def add_baseline_deviations(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute per-patient deviation from their own first-6h baseline.
+
+    For each vital in BASELINE_VITALS, adds {vital}_baseline_dev =
+    current value - mean(first 6 hours for this patient). Separates
+    'sick but stable' (low deviation) from 'sick and deteriorating'
+    (high deviation).
+    """
+    result = df.copy()
+
+    for vital in BASELINE_VITALS:
+        if vital not in result.columns:
+            continue
+
+        # Compute per-patient baseline: mean of first 6 rows (sorted by ICULOS)
+        def _patient_baseline(group):
+            sorted_vals = group.sort_values(TIME_COL)[vital].head(6)
+            baseline = sorted_vals.mean()
+            return group[vital] - baseline
+
+        result[f"{vital}_baseline_dev"] = (
+            result.groupby("patient_id", group_keys=False)
+            .apply(_patient_baseline)
+        )
+        result[f"{vital}_baseline_dev"] = result[f"{vital}_baseline_dev"].fillna(0.0)
+
+    return result
 
 
 def add_iculos_normalized(df: pd.DataFrame) -> pd.DataFrame:
@@ -308,6 +338,7 @@ def build_feature_matrix(
 
     enriched = add_iculos_normalized(df)
     enriched = add_clinical_scores(enriched)
+    enriched = add_baseline_deviations(enriched)
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)
 

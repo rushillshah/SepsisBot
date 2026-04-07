@@ -38,7 +38,10 @@ ROLLING_WINDOW_HOURS = 6
 ROLLING_STATS = ["mean", "min", "max", "std"]
 CLINICAL_SCORE_COLS = ["sirs_score", "qsofa_mod", "shock_index", "mews_mod", "lactate_map_ratio"]
 
-ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets", "MAP"] + CLINICAL_SCORE_COLS
+BASELINE_VITALS = ["HR", "Resp", "SBP", "MAP", "O2Sat", "Temp"]
+BASELINE_DEVIATION_COLS = [f"{v}_baseline_dev" for v in BASELINE_VITALS]
+
+ROLLING_COLS = VITAL_COLS + ["Lactate", "WBC", "Creatinine", "Platelets", "MAP"] + CLINICAL_SCORE_COLS + BASELINE_DEVIATION_COLS
 
 # ── Model Hyperparameters ──────────────────────────────────────────────────────
 

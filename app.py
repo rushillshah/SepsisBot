@@ -932,7 +932,7 @@ def page_model_performance():
         tn = cm["tn"]
         n_total = cm["total_patients"]
         n_actual = cm["actual_sepsis"]
-        n_no_sepsis = cm["actual_no_sepsis"]
+        n_no_sepsis = cm.get("actual_no_sepsis", n_total - n_actual)
 
         fig = go.Figure(data=go.Heatmap(
             z=[[tp, fn], [fp, tn]],

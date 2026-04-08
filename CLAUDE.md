@@ -67,7 +67,7 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 3. **Multi-timescale slopes** — 3h/6h/12h rate-of-change (currently only 1h deltas)
 4. **Feature selection** — cut from ~170 to top 30-50 by SHAP to reduce overfit gap
 5. **Patient-level alert aggregation** — X consecutive hours above threshold to reduce flip-flopping
-6. **MIMIC-IV integration** — adds 7 missing variables
+6. ~~MIMIC-IV integration~~ — **BLOCKED** ($1200 credentialing cost, not justified for PoC; real hospital data would provide these variables directly)
 
 ## Data Source
 

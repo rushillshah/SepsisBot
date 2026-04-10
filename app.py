@@ -272,6 +272,64 @@ def page_performance():
         no_data_warning()
         return
 
+    # ── Model Comparison (309 vs Top 100 features) ────────────────
+    comparison = metrics.get("model_comparison")
+    if comparison:
+        st.markdown("### Feature Selection: 309 vs Top 100")
+        st.markdown(
+            '<div class="metric-explanation">'
+            'Comparing the full 309-feature model against a leaner model using only the '
+            'top 100 features ranked by Information Value. Fewer features can reduce overfitting '
+            'and improve generalization.</div>',
+            unsafe_allow_html=True,
+        )
+
+        full = comparison["full_309"]
+        slim = comparison["top_100"]
+
+        comp_data = {
+            "Metric": ["AUROC", "Gini", "PR-AUC", "Overfit Gap", "Patient Sensitivity", "Patient Specificity", "Patient Precision", "Features"],
+            f"Full ({full['n_features']} features)": [
+                f"{full['xgb_auroc']:.4f}", f"{full['xgb_gini']:.4f}", f"{full['xgb_pr_auc']:.4f}",
+                f"{full['overfit_gap']:.4f}", f"{full['patient_sensitivity']:.1%}",
+                f"{full['patient_specificity']:.1%}", f"{full['patient_precision']:.1%}",
+                str(full['n_features']),
+            ],
+            f"Top {slim['n_features']} features": [
+                f"{slim['xgb_auroc']:.4f}", f"{slim['xgb_gini']:.4f}", f"{slim['xgb_pr_auc']:.4f}",
+                f"{slim['overfit_gap']:.4f}", f"{slim['patient_sensitivity']:.1%}",
+                f"{slim['patient_specificity']:.1%}", f"{slim['patient_precision']:.1%}",
+                str(slim['n_features']),
+            ],
+        }
+        st.dataframe(pd.DataFrame(comp_data), use_container_width=True, hide_index=True)
+
+        # Overlay ROC curves if available
+        slim_fpr = slim.get("fpr", [])
+        slim_tpr = slim.get("tpr", [])
+        if slim_fpr and slim_tpr:
+            fig_comp = go.Figure()
+            fig_comp.add_trace(go.Scatter(
+                x=metrics.get("fpr", []), y=metrics.get("tpr", []), mode="lines",
+                name=f"309 features (AUROC={full['xgb_auroc']:.3f})",
+                line=dict(color="#1f77b4", width=2.5),
+            ))
+            fig_comp.add_trace(go.Scatter(
+                x=slim_fpr, y=slim_tpr, mode="lines",
+                name=f"Top {slim['n_features']} (AUROC={slim['xgb_auroc']:.3f})",
+                line=dict(color="#ff7f0e", width=2.5),
+            ))
+            fig_comp.add_trace(go.Scatter(
+                x=[0, 1], y=[0, 1], mode="lines",
+                name="Random (0.500)", line=dict(color="gray", dash="dash", width=1),
+            ))
+            fig_comp.update_layout(
+                xaxis_title="False Positive Rate", yaxis_title="True Positive Rate",
+                height=400, legend=dict(x=0.4, y=0.15),
+                template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            )
+            st.plotly_chart(fig_comp, use_container_width=True)
+
     # ── ROC Curve ────────────────────────────────────────────────────
     fpr = metrics.get("fpr", [])
     tpr = metrics.get("tpr", [])

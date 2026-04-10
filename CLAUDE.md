@@ -35,7 +35,7 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 ### All Issues from Nachiket's Review — RESOLVED
 1. ~~Confusion matrix fabricated~~ → **FIXED** — real from CV concat predictions
 2. ~~Metrics labeled patient-level but hour-level~~ → **FIXED** — clearly separated
-3. ~~Median imputation harmful~~ → **FIXED** — zero-fill
+3. ~~Median imputation harmful~~ → **FIXED** — vitals use population median, labs use zero-fill
 4. ~~ICULOS confounder~~ → **FIXED** — replaced with log + bucket
 5. ~~Threshold miscalibrated~~ → **FIXED** — threshold analysis at 11 points
 6. ~~Oversampling~~ → **FIXED** — 18x sepsis oversampling
@@ -51,7 +51,7 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 6. Sepsis oversampling (18x duplication, ~1:3 ratio)
 7. Stronger XGBoost regularization (max_depth 3-5, L1/L2 reg, min_child_weight, gamma)
 8. Feature scaling via StandardScaler
-9. Zero-fill imputation (replaced harmful median fill)
+9. Vital median-fill + lab zero-fill imputation (vitals get population median, labs get zero with missingness flags)
 10. Clinical scoring features (SIRS, qSOFA mod, Shock Index, MEWS mod, Lactate/MAP)
 11. Feature importance analysis (IV, Gain, SHAP) — `data/processed/feature_analysis/`
 12. Threshold analysis — `src/threshold_analysis.py` + dashboard table
@@ -92,15 +92,15 @@ Urine output, Procalcitonin, CRP, INR, Vasopressor/inotropic use, Ventilator sta
 
 Order matters — each step depends on the previous:
 
-1. **Missingness flags** — binary `{col}_measured` for each of 26 lab columns (1 if drawn this hour, 0 if not)
-2. **Time since measurement** — `{col}_hours_since` counting hours since last draw, -1 sentinel before first draw
-3. **Forward-fill** — carry last known lab value forward within each patient
-4. **Median fill** — remaining NaN (before any measurement) filled with column medians
-5. **Final NaN fill** — `X.fillna(0.0)` in build_feature_matrix catches any stragglers
+1. **Missingness flags** — binary `{col}_measured` for each of 34 vital+lab columns (1 if measured this hour, 0 if not)
+2. **Time since measurement** — `{col}_hours_since` counting hours since last measurement, -1 sentinel before first
+3. **Forward-fill** — carry last known value forward within each patient
+4. **Remaining NaN fill** — vitals filled with population median (zero is physiologically impossible); labs filled with 0.0
+5. **Final NaN fill** — `X.fillna(0.0)` in build_feature_matrix catches derived feature stragglers
 
 **Critical insight:** Missingness flags and time-since-measured are computed BEFORE forward-fill so they reflect actual draw times, not imputed values. The missingness pattern itself is clinically informative (sicker patients get tested more often).
 
-## Feature Engineering (145 features after exclusions)
+## Feature Engineering (161 features after exclusions)
 
 | Category | Count | Examples |
 |----------|------:|---------|
@@ -108,8 +108,8 @@ Order matters — each step depends on the previous:
 | Raw labs | 26 | WBC, Lactate, Creatinine |
 | Demographics | 2 | Age, Gender (Unit1/Unit2/HospAdmTime excluded) |
 | Time | 1 | ICULOS (hours in ICU) |
-| Missingness flags | 26 | WBC_measured, Lactate_measured |
-| Time since measurement | 26 | WBC_hours_since, Lactate_hours_since |
+| Missingness flags | 34 | HR_measured, WBC_measured, Lactate_measured |
+| Time since measurement | 34 | HR_hours_since, WBC_hours_since, Lactate_hours_since |
 | Rolling window stats (6h) | 48 | HR_roll_mean, Lactate_roll_std, MAP_roll_max |
 | Trend deltas | 8 | HR_delta, Resp_delta, MAP_delta |
 

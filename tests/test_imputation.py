@@ -32,9 +32,14 @@ def _build_synthetic_patients() -> pd.DataFrame:
         for hour in range(1, 11):
             row: dict = {"patient_id": pid, "ICULOS": hour, "SepsisLabel": 0}
 
-            # Vitals: always present
+            # Vitals: mostly present, but controlled NaN gaps for testing.
+            #   - First 2 hours: NaN (patient not yet on monitor)
+            #   - Hours 3-10: measured
             for col in VITAL_COLS:
-                row[col] = rng.uniform(60.0, 100.0)
+                if hour <= 2:
+                    row[col] = np.nan
+                else:
+                    row[col] = rng.uniform(60.0, 100.0)
 
             # Labs: introduce controlled NaN pattern.
             #   - First 3 hours: all NaN (no labs drawn yet)
@@ -77,12 +82,17 @@ def raw_df() -> pd.DataFrame:
 
 
 class TestMissingnessFlags:
-    def test_flag_columns_exist(self, raw_df: pd.DataFrame) -> None:
+    def test_flag_columns_exist_for_labs(self, raw_df: pd.DataFrame) -> None:
         result = add_missingness_flags(raw_df)
         for col in LAB_COLS:
             assert f"{col}_measured" in result.columns
 
-    def test_flag_is_one_where_present(self, raw_df: pd.DataFrame) -> None:
+    def test_flag_columns_exist_for_vitals(self, raw_df: pd.DataFrame) -> None:
+        result = add_missingness_flags(raw_df)
+        for col in VITAL_COLS:
+            assert f"{col}_measured" in result.columns
+
+    def test_lab_flag_is_one_where_present(self, raw_df: pd.DataFrame) -> None:
         result = add_missingness_flags(raw_df)
         p1 = result[result["patient_id"] == "p001"]
 
@@ -93,7 +103,7 @@ class TestMissingnessFlags:
             # Hour 7 (index 6) should be measured
             assert p1.iloc[6][flag] == 1
 
-    def test_flag_is_zero_where_nan(self, raw_df: pd.DataFrame) -> None:
+    def test_lab_flag_is_zero_where_nan(self, raw_df: pd.DataFrame) -> None:
         result = add_missingness_flags(raw_df)
         p1 = result[result["patient_id"] == "p001"]
 
@@ -103,6 +113,26 @@ class TestMissingnessFlags:
             assert p1.iloc[0][flag] == 0
             assert p1.iloc[1][flag] == 0
             assert p1.iloc[2][flag] == 0
+
+    def test_vital_flag_is_zero_where_nan(self, raw_df: pd.DataFrame) -> None:
+        result = add_missingness_flags(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in VITAL_COLS:
+            flag = f"{col}_measured"
+            # Hours 1-2 (indices 0-1) vitals are NaN
+            assert p1.iloc[0][flag] == 0
+            assert p1.iloc[1][flag] == 0
+
+    def test_vital_flag_is_one_where_present(self, raw_df: pd.DataFrame) -> None:
+        result = add_missingness_flags(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in VITAL_COLS:
+            flag = f"{col}_measured"
+            # Hour 3+ (index 2+) vitals are measured
+            assert p1.iloc[2][flag] == 1
+            assert p1.iloc[5][flag] == 1
 
     def test_does_not_mutate_input(self, raw_df: pd.DataFrame) -> None:
         original_cols = list(raw_df.columns)
@@ -116,12 +146,17 @@ class TestMissingnessFlags:
 
 
 class TestTimeSinceMeasured:
-    def test_hours_since_columns_exist(self, raw_df: pd.DataFrame) -> None:
+    def test_hours_since_columns_exist_for_labs(self, raw_df: pd.DataFrame) -> None:
         result = add_time_since_measured(raw_df)
         for col in LAB_COLS:
             assert f"{col}_hours_since" in result.columns
 
-    def test_sentinel_before_first_measurement(self, raw_df: pd.DataFrame) -> None:
+    def test_hours_since_columns_exist_for_vitals(self, raw_df: pd.DataFrame) -> None:
+        result = add_time_since_measured(raw_df)
+        for col in VITAL_COLS:
+            assert f"{col}_hours_since" in result.columns
+
+    def test_lab_sentinel_before_first_measurement(self, raw_df: pd.DataFrame) -> None:
         result = add_time_since_measured(raw_df)
         p1 = result[result["patient_id"] == "p001"]
 
@@ -132,7 +167,26 @@ class TestTimeSinceMeasured:
             assert p1.iloc[1][hs] == -1.0
             assert p1.iloc[2][hs] == -1.0
 
-    def test_zero_at_measurement_hour(self, raw_df: pd.DataFrame) -> None:
+    def test_vital_sentinel_before_first_measurement(self, raw_df: pd.DataFrame) -> None:
+        result = add_time_since_measured(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in VITAL_COLS:
+            hs = f"{col}_hours_since"
+            # Hours 1-2 are before any vital measurement -> -1
+            assert p1.iloc[0][hs] == -1.0
+            assert p1.iloc[1][hs] == -1.0
+
+    def test_vital_zero_at_first_measurement(self, raw_df: pd.DataFrame) -> None:
+        result = add_time_since_measured(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in VITAL_COLS:
+            hs = f"{col}_hours_since"
+            # Hour 3 (index 2): first vital measurement -> 0
+            assert p1.iloc[2][hs] == 0.0
+
+    def test_lab_zero_at_measurement_hour(self, raw_df: pd.DataFrame) -> None:
         result = add_time_since_measured(raw_df)
         p1 = result[result["patient_id"] == "p001"]
 
@@ -143,7 +197,7 @@ class TestTimeSinceMeasured:
             # Hour 7 (index 6): second measurement -> 0
             assert p1.iloc[6][hs] == 0.0
 
-    def test_counts_increment_after_measurement(self, raw_df: pd.DataFrame) -> None:
+    def test_lab_counts_increment_after_measurement(self, raw_df: pd.DataFrame) -> None:
         result = add_time_since_measured(raw_df)
         p1 = result[result["patient_id"] == "p001"]
 
@@ -168,6 +222,12 @@ class TestTimeSinceMeasured:
             assert p2.iloc[0][hs] == -1.0
             assert p2.iloc[1][hs] == -1.0
             assert p2.iloc[2][hs] == -1.0
+
+        for col in VITAL_COLS:
+            hs = f"{col}_hours_since"
+            # Patient 2 also has NaN for hours 1-2 -> sentinel -1
+            assert p2.iloc[0][hs] == -1.0
+            assert p2.iloc[1][hs] == -1.0
 
 
 # ---------------------------------------------------------------------------
@@ -227,12 +287,15 @@ class TestImpute:
         for col in ALL_FEATURE_COLS:
             assert col in result.columns
 
-        # Missingness flags added
+        # Missingness flags added for both labs and vitals
         for col in LAB_COLS:
             assert f"{col}_measured" in result.columns
             assert f"{col}_hours_since" in result.columns
+        for col in VITAL_COLS:
+            assert f"{col}_measured" in result.columns
+            assert f"{col}_hours_since" in result.columns
 
-    def test_flags_reflect_original_missingness(
+    def test_lab_flags_reflect_original_missingness(
         self, raw_df: pd.DataFrame
     ) -> None:
         """Flags must be computed BEFORE forward-fill.
@@ -250,6 +313,54 @@ class TestImpute:
 
             # Hour 4 (index 3): actually measured, flag is 1
             assert p1.iloc[3][f"{col}_measured"] == 1
+
+    def test_vital_flags_reflect_original_missingness(
+        self, raw_df: pd.DataFrame
+    ) -> None:
+        """Vital flags must reflect raw presence, not forward-filled values."""
+        result = impute(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in VITAL_COLS:
+            # Hours 1-2 (indices 0-1): originally NaN, flag should be 0
+            assert p1.iloc[0][f"{col}_measured"] == 0
+            assert p1.iloc[1][f"{col}_measured"] == 0
+            # Hour 3 (index 2): measured, flag should be 1
+            assert p1.iloc[2][f"{col}_measured"] == 1
+
+    def test_vitals_filled_with_median_not_zero(
+        self, raw_df: pd.DataFrame
+    ) -> None:
+        """Vitals before first measurement should get population median, not 0."""
+        result = impute(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in VITAL_COLS:
+            val = p1.iloc[0][col]
+            # Must not be NaN
+            assert not pd.isna(val), f"{col} still NaN after imputation"
+            # Must not be zero (physiologically impossible for vitals)
+            assert val != 0.0, f"{col} filled with 0.0 instead of median"
+            # Should be the population median of measured values
+            measured_vals = raw_df[col].dropna()
+            if len(measured_vals) > 0:
+                expected_median = measured_vals.median()
+                assert val == pytest.approx(expected_median), (
+                    f"{col} expected median {expected_median}, got {val}"
+                )
+
+    def test_labs_still_filled_with_zero(
+        self, raw_df: pd.DataFrame
+    ) -> None:
+        """Labs before first measurement should still get 0.0 (regression guard)."""
+        result = impute(raw_df)
+        p1 = result[result["patient_id"] == "p001"]
+
+        for col in LAB_COLS:
+            # Hours 1-3 (indices 0-2): before first lab measurement
+            assert p1.iloc[0][col] == 0.0, (
+                f"{col} should be 0.0 before first measurement"
+            )
 
     def test_row_count_unchanged(self, raw_df: pd.DataFrame) -> None:
         result = impute(raw_df)

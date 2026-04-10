@@ -8,16 +8,16 @@ actual measurements, not imputed values.
 import numpy as np
 import pandas as pd
 
-from src.config import ALL_FEATURE_COLS, LAB_COLS
+from src.config import ALL_FEATURE_COLS, LAB_COLS, VITAL_COLS
 
 
 def add_missingness_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """Add binary `{col}_measured` columns for each lab column.
+    """Add binary `{col}_measured` columns for each vital and lab column.
 
     1 where the original value is present, 0 where NaN.
     """
     result = df.copy()
-    for col in LAB_COLS:
+    for col in VITAL_COLS + LAB_COLS:
         result[f"{col}_measured"] = df[col].notna().astype(np.int8)
     return result
 
@@ -50,13 +50,13 @@ def _hours_since_last_measurement(series: pd.Series) -> pd.Series:
 
 
 def add_time_since_measured(df: pd.DataFrame) -> pd.DataFrame:
-    """Add `{col}_hours_since` for each lab column, computed per patient.
+    """Add `{col}_hours_since` for each vital and lab column, per patient.
 
-    Counts hours since the lab was last measured. Uses -1 as a sentinel
+    Counts hours since the column was last measured. Uses -1 as a sentinel
     for hours before any measurement exists for that patient.
     """
     result = df.copy()
-    for col in LAB_COLS:
+    for col in VITAL_COLS + LAB_COLS:
         result[f"{col}_hours_since"] = (
             df.groupby("patient_id")[col]
             .transform(_hours_since_last_measurement)
@@ -76,20 +76,33 @@ def forward_fill_per_patient(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fill_remaining_nans(df: pd.DataFrame) -> pd.DataFrame:
-    """Fill NaN values remaining after forward-fill with zero.
+    """Fill NaN values remaining after forward-fill.
 
     Forward-fill leaves NaN for hours before a patient's first measurement.
-    These are filled with 0 (not median — median imputation invents data
-    for high-missingness columns like Bilirubin_direct at 96% missing).
 
-    The missingness flags ({col}_measured=0, {col}_hours_since=-1) already
-    tell the model these values are unknown. Zero is a neutral sentinel
-    that works for both XGBoost and LogisticRegression after scaling.
+    Vitals: filled with population median (zero is physiologically
+    impossible — HR=0 means dead, Temp=0 means frozen).
+
+    Labs: filled with 0.0. High-missingness columns like Bilirubin_direct
+    (96% missing) would get misleading median values. The missingness flags
+    ({col}_measured=0, {col}_hours_since=-1) already tell the model these
+    values are unknown.
     """
     result = df.copy()
-    for col in ALL_FEATURE_COLS:
+
+    # Vitals: fill with population median (physiologically plausible)
+    for col in VITAL_COLS:
+        if result[col].isna().any():
+            median_val = result[col].median()
+            result[col] = result[col].fillna(
+                median_val if pd.notna(median_val) else 0.0
+            )
+
+    # Labs: fill with zero (missingness flags mark them as unknown)
+    for col in LAB_COLS:
         if result[col].isna().any():
             result[col] = result[col].fillna(0.0)
+
     return result
 
 
@@ -100,7 +113,7 @@ def impute(df: pd.DataFrame) -> pd.DataFrame:
       1. Add missingness flags (reflects raw measurements)
       2. Add time-since-measured (reflects raw measurements)
       3. Forward-fill per patient (carries last known value forward)
-      4. Fill remaining NaN with column medians
+      4. Fill remaining NaN (vitals with median, labs with zero)
     """
     result = add_missingness_flags(df)
     result = add_time_since_measured(result)

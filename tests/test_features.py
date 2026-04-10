@@ -64,7 +64,8 @@ def _build_imputed_df() -> pd.DataFrame:
             row["Unit2"] = 0
             row["HospAdmTime"] = -12.0
 
-            # Missingness metadata (simulate: labs measured at hours 1,4,7)
+            # Missingness metadata (simulate: labs measured at hours 1,4,7;
+            # vitals measured every hour)
             for col in LAB_COLS:
                 row[f"{col}_measured"] = 1 if hour in (1, 4, 7) else 0
                 if hour in (1, 4, 7):
@@ -77,6 +78,10 @@ def _build_imputed_df() -> pd.DataFrame:
                         if hour > mh:
                             row[f"{col}_hours_since"] = float(hour - mh)
                             break
+
+            for col in VITAL_COLS:
+                row[f"{col}_measured"] = 1
+                row[f"{col}_hours_since"] = 0.0
 
             rows.append(row)
 

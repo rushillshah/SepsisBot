@@ -107,10 +107,10 @@ Lab values are drawn every few hours, not hourly. This creates **70-99% NaN rate
 
 | Step | Operation | Rationale |
 |------|-----------|-----------|
-| 1 | **Missingness flags** | Binary indicator per lab column: was this lab measured at this hour? Captures testing frequency as a signal. |
-| 2 | **Time since measurement** | Hours since each lab was last drawn for each patient. Encodes how "stale" a lab value is. |
+| 1 | **Missingness flags** | Binary indicator per vital and lab column: was this value measured at this hour? Captures testing frequency as a signal. |
+| 2 | **Time since measurement** | Hours since each vital/lab was last measured for each patient. Encodes how "stale" a value is. |
 | 3 | **Forward-fill** | Carry last known value forward within each patient stay. Clinicians treat the most recent value as current until a new one arrives. |
-| 4 | **Median fill** | Remaining NaN (before a patient's first measurement) filled with training-set column medians. |
+| 4 | **Remaining NaN fill** | Vitals filled with population median (zero is physiologically impossible — HR=0 means dead). Labs filled with 0.0 (missingness flags mark them as unknown). |
 | 5 | **Final NaN fill** | Any remaining NaN in derived features (e.g., rolling stats at start of stay) filled with 0.0. |
 
 ### Excluded Features
@@ -127,7 +127,7 @@ Three columns were **dropped** as site-specific confounders:
 
 ---
 
-## 4. Feature Engineering (145 features)
+## 4. Feature Engineering (161 features)
 
 ### Feature Groups
 
@@ -137,11 +137,11 @@ Three columns were **dropped** as site-specific confounders:
 | Raw labs | 26 | WBC, Hgb, Platelets, Lactate, Creatinine, Bilirubin, etc. |
 | Demographics | 2 | Age, Gender (after dropping Unit1, Unit2, HospAdmTime) |
 | Time | 1 | ICULOS (hours in ICU) |
-| Missingness flags | 26 | `{lab}_measured` — binary indicator per lab per hour |
-| Time since measurement | 26 | `{lab}_hours_since` — hours since last draw per patient |
+| Missingness flags | 34 | `{col}_measured` — binary indicator per vital/lab per hour |
+| Time since measurement | 34 | `{col}_hours_since` — hours since last measurement per patient |
 | Rolling window stats | 48 | 6-hour rolling mean, min, max, std for key vitals and labs |
 | Trend features | 8 | Hour-over-hour deltas for each vital sign |
-| **Total** | **145** | |
+| **Total** | **161** | |
 
 ### Rolling Window Features
 

@@ -57,6 +57,10 @@ def synthetic_df() -> pd.DataFrame:
                 row[f"{col}_measured"] = int(rng.integers(0, 2))
                 row[f"{col}_hours_since"] = float(rng.uniform(0.0, 6.0))
 
+            for col in VITAL_COLS:
+                row[f"{col}_measured"] = 1
+                row[f"{col}_hours_since"] = 0.0
+
             for col in DEMOGRAPHIC_COLS:
                 row[col] = float(rng.uniform(20.0, 80.0))
 

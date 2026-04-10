@@ -14,7 +14,10 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 from src.config import (
+    AGE_BINS,
+    AGE_BIN_LABELS,
     ALL_FEATURE_COLS,
+    CLINICAL_NORMAL_RANGES,
     CLINICAL_SCORE_COLS,
     CUSUM_SLACK,
     CUSUM_THRESHOLD,
@@ -25,6 +28,7 @@ from src.config import (
     EXCLUDED_FEATURES,
     LABEL_COL,
     LAB_COLS,
+    NORMAL_RANGE_COLS,
     ROLLING_COLS,
     ROLLING_STAT_SUFFIXES,
     ROLLING_STATS,
@@ -303,6 +307,55 @@ def add_clinical_scores(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def add_normal_range_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add age/gender-stratified clinical normal range features.
+
+    For each column in NORMAL_RANGE_COLS, computes:
+      - {col}_above_normal  (binary): value exceeds age/gender upper bound
+      - {col}_below_normal  (binary): value below age/gender lower bound
+      - {col}_deviation_from_normal (float): signed distance from range midpoint,
+        normalized by half-range width (z-score-like: ±1.0 = at boundary)
+
+    Uses clinically established reference ranges from CLINICAL_NORMAL_RANGES.
+    No data leakage — only uses current-row value + static demographics.
+    """
+    result = df.copy()
+
+    age_bin = pd.cut(
+        result["Age"],
+        bins=AGE_BINS,
+        labels=AGE_BIN_LABELS,
+        right=False,
+    ).fillna("18-40")
+
+    gender = result["Gender"].fillna(1).astype(int)
+
+    for col in NORMAL_RANGE_COLS:
+        if col not in result.columns:
+            continue
+
+        ranges = CLINICAL_NORMAL_RANGES.get(col)
+        if ranges is None:
+            continue
+
+        # Build per-row (low, high) via vectorized lookup
+        default = ranges.get(("18-40", 1), (0.0, 0.0))
+        keys = list(zip(age_bin.astype(str), gender))
+        low = np.array([ranges.get(k, default)[0] for k in keys], dtype=np.float64)
+        high = np.array([ranges.get(k, default)[1] for k in keys], dtype=np.float64)
+
+        values = result[col].values.astype(np.float64)
+        midpoint = (low + high) / 2.0
+        half_range = (high - low) / 2.0
+        half_range[half_range == 0] = 1.0  # guard against zero division
+
+        result[f"{col}_above_normal"] = (values > high).astype(np.int8)
+        result[f"{col}_below_normal"] = (values < low).astype(np.int8)
+        result[f"{col}_deviation_from_normal"] = (values - midpoint) / half_range
+
+    return result
+
+
 def create_early_label(df: pd.DataFrame, extra_hours: int = EARLY_LABEL_EXTRA_HOURS) -> pd.DataFrame:
     """Create extended positive label window for early detection training.
 
@@ -363,6 +416,7 @@ def build_feature_matrix(
         )
 
     enriched = add_clinical_scores(df)
+    enriched = add_normal_range_features(enriched)
     enriched = add_dynamic_baselines(enriched)
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)

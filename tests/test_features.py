@@ -8,6 +8,7 @@ from src.config import (
     ALL_FEATURE_COLS,
     EXCLUDED_FEATURES,
     LAB_COLS,
+    NORMAL_RANGE_COLS,
     ROLLING_COLS,
     ROLLING_STAT_SUFFIXES,
     ROLLING_STATS,
@@ -15,6 +16,7 @@ from src.config import (
     VITAL_COLS,
 )
 from src.features import (
+    add_normal_range_features,
     add_rolling_features,
     add_trend_features,
     build_feature_matrix,
@@ -58,9 +60,9 @@ def _build_imputed_df() -> pd.DataFrame:
             for col in LAB_COLS:
                 row[col] = rng.uniform(1.0, 10.0)
 
-            # Demographics
-            row["Age"] = 60.0
-            row["Gender"] = 1
+            # Demographics — vary by patient for stratification tests
+            row["Age"] = 60.0 if pid == "p001" else 30.0
+            row["Gender"] = 1 if pid == "p001" else 0
             row["Unit1"] = 1
             row["Unit2"] = 0
             row["HospAdmTime"] = -12.0
@@ -337,3 +339,80 @@ class TestScaleFeatures:
         X_tr_s, _, _ = scale_features(X.iloc[:mid], X.iloc[mid:])
         means = np.abs(X_tr_s.mean())
         assert (means < 0.1).all()
+
+
+# ---------------------------------------------------------------------------
+# Tests: add_normal_range_features
+# ---------------------------------------------------------------------------
+
+
+class TestNormalRangeFeatures:
+    def test_columns_created(self, imputed_df: pd.DataFrame) -> None:
+        result = add_normal_range_features(imputed_df)
+        for col in NORMAL_RANGE_COLS:
+            if col in imputed_df.columns:
+                assert f"{col}_above_normal" in result.columns
+                assert f"{col}_below_normal" in result.columns
+                assert f"{col}_deviation_from_normal" in result.columns
+
+    def test_above_below_binary(self, imputed_df: pd.DataFrame) -> None:
+        """HR=130 for a 60yo male should be above_normal (range 60-100)."""
+        df = imputed_df.copy()
+        df.loc[df["patient_id"] == "p001", "HR"] = 130.0
+        result = add_normal_range_features(df)
+        p1 = result[result["patient_id"] == "p001"]
+        assert (p1["HR_above_normal"] == 1).all()
+        assert (p1["HR_below_normal"] == 0).all()
+
+    def test_below_normal_flag(self, imputed_df: pd.DataFrame) -> None:
+        """HR=50 should be below_normal (range 60-100)."""
+        df = imputed_df.copy()
+        df.loc[df["patient_id"] == "p001", "HR"] = 50.0
+        result = add_normal_range_features(df)
+        p1 = result[result["patient_id"] == "p001"]
+        assert (p1["HR_below_normal"] == 1).all()
+        assert (p1["HR_above_normal"] == 0).all()
+
+    def test_deviation_sign(self, imputed_df: pd.DataFrame) -> None:
+        """Value at midpoint should give deviation ~0, above gives positive."""
+        df = imputed_df.copy()
+        df.loc[df["patient_id"] == "p001", "HR"] = 80.0  # midpoint of 60-100
+        df.loc[df["patient_id"] == "p002", "HR"] = 120.0  # above range
+        result = add_normal_range_features(df)
+        p1 = result[result["patient_id"] == "p001"]
+        p2 = result[result["patient_id"] == "p002"]
+        assert p1["HR_deviation_from_normal"].iloc[0] == pytest.approx(0.0)
+        assert p2["HR_deviation_from_normal"].iloc[0] > 0
+
+    def test_elderly_vs_young_temp(self, imputed_df: pd.DataFrame) -> None:
+        """Temp 37.5 should be above_normal for 80+ but normal for 18-40."""
+        df = imputed_df.copy()
+        # p001 is Age=60 (60-80 bin, upper=37.5), p002 is Age=30 (18-40 bin, upper=37.8)
+        df["Temp"] = 37.6
+        result = add_normal_range_features(df)
+        p1 = result[result["patient_id"] == "p001"]  # 60yo: upper=37.5 -> above
+        p2 = result[result["patient_id"] == "p002"]  # 30yo: upper=37.8 -> normal
+        assert (p1["Temp_above_normal"] == 1).all()
+        assert (p2["Temp_above_normal"] == 0).all()
+
+    def test_gender_creatinine(self, imputed_df: pd.DataFrame) -> None:
+        """Creatinine 1.15: above_normal for young female, normal for 60yo male."""
+        df = imputed_df.copy()
+        df["Creatinine"] = 1.15
+        result = add_normal_range_features(df)
+        # p001: Age=60, Gender=1(male) -> range (0.8, 1.4) -> normal
+        p1 = result[result["patient_id"] == "p001"]
+        assert (p1["Creatinine_above_normal"] == 0).all()
+        # p002: Age=30, Gender=0(female) -> range (0.5, 1.0) -> above
+        p2 = result[result["patient_id"] == "p002"]
+        assert (p2["Creatinine_above_normal"] == 1).all()
+
+    def test_no_mutation(self, imputed_df: pd.DataFrame) -> None:
+        original_cols = list(imputed_df.columns)
+        _ = add_normal_range_features(imputed_df)
+        assert list(imputed_df.columns) == original_cols
+
+    def test_features_in_final_matrix(self, imputed_df: pd.DataFrame) -> None:
+        X, _ = build_feature_matrix(imputed_df)
+        assert "HR_above_normal" in X.columns
+        assert "Creatinine_deviation_from_normal" in X.columns

@@ -7,6 +7,7 @@ Steps:
     4. Save metrics JSON, plots, and model artifacts.
 """
 
+import gc
 import json
 import sys
 
@@ -120,6 +121,10 @@ def run() -> None:
     patient_ids = imputed_df["patient_id"].to_numpy()
     eval_labels = imputed_df["SepsisLabel"].to_numpy()
     print(f"  Features: {len(feature_names)}, Rows: {len(X_all):,}")
+
+    # Free imputed_df — no longer needed, X_all has everything
+    del imputed_df, raw_df
+    gc.collect()
 
     # ── 3. Patient-level cross-validation (ALL metrics come from here) ────
     print("\n[Step 3/4] Running patient-level cross-validation ...")

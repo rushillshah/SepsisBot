@@ -137,7 +137,7 @@ def _train_fold(
         scoring="roc_auc",
         cv=inner_cv,
         random_state=RANDOM_STATE,
-        n_jobs=-1,
+        n_jobs=2,
         verbose=0,
     )
     search.fit(X_train, y_train)

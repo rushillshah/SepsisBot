@@ -26,17 +26,17 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 | 0.50 | 83.3% | 88.1% | 35.6% | 6,842 |
 
 ### Top Features (updated with 248-feature model)
-1. iculos_bucket (clinical phase)
-2. Lactate_changepoint_hour (CUSUM-detected change)
-3. mews_mod (Modified Early Warning Score)
+1. FiO2 (fraction of inspired oxygen)
+2. Temp_max_6h (peak temperature over 6 hours)
+3. early_warning_score (MEWS clinical score)
 4. Phosphate_hours_since (lab testing frequency)
-5. iculos_log, FiO2, mews_mod_roll_max, qsofa_mod_roll_mean
+5. Resp_avg_6h, Creatinine_max_6h, sepsis_screen_score
 
 ### All Issues from Nachiket's Review — RESOLVED
 1. ~~Confusion matrix fabricated~~ → **FIXED** — real from CV concat predictions
 2. ~~Metrics labeled patient-level but hour-level~~ → **FIXED** — clearly separated
 3. ~~Median imputation harmful~~ → **FIXED** — vitals use population median, labs use zero-fill
-4. ~~ICULOS confounder~~ → **FIXED** — replaced with log + bucket
+4. ~~ICULOS confounder~~ → **FIXED** — removed (was circular/leaky)
 5. ~~Threshold miscalibrated~~ → **FIXED** — threshold analysis at 11 points
 6. ~~Oversampling~~ → **FIXED** — 18x sepsis oversampling
 7. ~~Final model scored training data~~ → **FIXED** — removed, all metrics from CV concat
@@ -46,7 +46,7 @@ The core question: given a patient's hourly vitals and periodic lab draws, can w
 1. Full data pipeline (load 40K PSV files, impute, feature engineer)
 2. Three models: LR, XGBoost, LSTM (LSTM needs GPU training)
 3. Removed site confounders (Unit1, Unit2, HospAdmTime, raw ICULOS)
-4. ICULOS normalized (log + clinical phase buckets)
+4. ICULOS removed (was circular — longer stay = more sepsis is a tautology)
 5. Patient-level stratified 3-fold CV with Platt calibration
 6. Sepsis oversampling (18x duplication, ~1:3 ratio)
 7. Stronger XGBoost regularization (max_depth 3-5, L1/L2 reg, min_child_weight, gamma)
@@ -110,8 +110,8 @@ Order matters — each step depends on the previous:
 | Time | 1 | ICULOS (hours in ICU) |
 | Missingness flags | 34 | HR_measured, WBC_measured, Lactate_measured |
 | Time since measurement | 34 | HR_hours_since, WBC_hours_since, Lactate_hours_since |
-| Rolling window stats (6h) | 48 | HR_roll_mean, Lactate_roll_std, MAP_roll_max |
-| Trend deltas | 8 | HR_delta, Resp_delta, MAP_delta |
+| Rolling window stats (6h) | 48 | HR_avg_6h, Lactate_std_6h, MAP_max_6h |
+| Hourly change | 8 | HR_hourly_change, Resp_hourly_change, MAP_hourly_change |
 
 Rolling window: 6-hour backward-looking window with min_periods=1 (no future data leakage).
 

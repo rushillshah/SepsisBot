@@ -26,6 +26,7 @@ from src.config import (
     LABEL_COL,
     LAB_COLS,
     ROLLING_COLS,
+    ROLLING_STAT_SUFFIXES,
     ROLLING_STATS,
     ROLLING_WINDOW_HOURS,
     TIME_COL,
@@ -68,7 +69,8 @@ def add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
             min_periods=1,
         )
         for stat in ROLLING_STATS:
-            col_name = f"{col}_roll_{stat}"
+            suffix = ROLLING_STAT_SUFFIXES[stat]
+            col_name = f"{col}_{suffix}"
             # .agg / getattr dispatches to the correct rolling method.
             computed = getattr(rolling, stat)()
             # rolling().stat() produces a MultiIndex (patient_id, row);
@@ -86,8 +88,8 @@ def add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
 def add_trend_features(df: pd.DataFrame) -> pd.DataFrame:
     """Compute hour-over-hour deltas for vital-sign columns per patient.
 
-    For each column in ``VITAL_COLS``, a new column ``{col}_delta`` holds
-    the difference from the previous hour within the same patient.  The
+    For each column in ``VITAL_COLS``, a new column ``{col}_hourly_change``
+    holds the difference from the previous hour within the same patient.  The
     first hour of each patient stay receives ``NaN`` (filled to ``0.0``
     so downstream models can consume the column directly).
 
@@ -104,7 +106,7 @@ def add_trend_features(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
 
     for col in VITAL_COLS:
-        result[f"{col}_delta"] = (
+        result[f"{col}_hourly_change"] = (
             result.groupby("patient_id")[col]
             .diff()
             .fillna(0.0)
@@ -199,33 +201,15 @@ def add_dynamic_baselines(df: pd.DataFrame) -> pd.DataFrame:
         # changepoint_hour and baseline_length are LEAKY (encode future info
         # at early hours — at hour 1 the model would know the change happens
         # at hour X). Confirmed via SHAP: these dominate importance = leakage.
-        result[f"{feature}_dynamic_dev"] = (
+        result[f"{feature}_baseline_dev"] = (
             result[feature] - result["patient_id"].map(baselines)
         ).fillna(0.0)
 
     return result
 
 
-def add_iculos_normalized(df: pd.DataFrame) -> pd.DataFrame:
-    """Replace raw ICULOS with log and bucket versions.
 
-    Raw ICULOS is dropped (added to EXCLUDED_FEATURES in config).
-    Two replacements:
-    - iculos_log: log(ICULOS + 1), compresses 1-336h range
-    - iculos_bucket: 0=0-6h, 1=6-24h, 2=24-72h, 3=72h+ (clinical phases)
-    """
-    result = df.copy()
-    iculos = result.get(TIME_COL, pd.Series(dtype=float))
 
-    result["iculos_log"] = np.log1p(iculos).fillna(0)
-    result["iculos_bucket"] = pd.Series(np.select(
-        [iculos <= 6, (iculos > 6) & (iculos <= 24),
-         (iculos > 24) & (iculos <= 72), iculos > 72],
-        [0, 1, 2, 3],
-        default=0,
-    ), index=result.index, dtype=float)
-
-    return result
 
 
 def _mews_hr(hr: pd.Series) -> pd.Series:
@@ -269,8 +253,8 @@ def _mews_temp(temp: pd.Series) -> pd.Series:
 def add_clinical_scores(df: pd.DataFrame) -> pd.DataFrame:
     """Compute validated clinical scoring features from existing vitals/labs.
 
-    Adds 5 columns: sirs_score, qsofa_mod, shock_index, mews_mod,
-    lactate_map_ratio. Computed from raw (imputed) values — call BEFORE
+    Adds 5 columns: inflammation_score, sepsis_screen_score, shock_index,
+    early_warning_score, lactate_bp_ratio. Computed from raw (imputed) values — call BEFORE
     rolling/trend features so these scores also get temporal stats.
 
     Returns a new DataFrame (no mutation).
@@ -292,29 +276,29 @@ def add_clinical_scores(df: pd.DataFrame) -> pd.DataFrame:
         + (resp > 20).astype(float)
         + ((wbc > 12) | (wbc < 4)).astype(float)
     )
-    result["sirs_score"] = sirs.fillna(0)
+    result["inflammation_score"] = sirs.fillna(0)
 
     # Modified qSOFA (0-2): 2 of 3 components (missing GCS)
     qsofa = (
         (resp >= 22).astype(float)
         + (sbp <= 100).astype(float)
     )
-    result["qsofa_mod"] = qsofa.fillna(0)
+    result["sepsis_screen_score"] = qsofa.fillna(0)
 
     # Shock Index: HR / SBP
     with np.errstate(divide="ignore", invalid="ignore"):
         si = hr / sbp.replace(0, np.nan)
     result["shock_index"] = si.clip(0, 5).fillna(0)
 
-    # Modified MEWS (0-8ish)
-    result["mews_mod"] = (
+    # Early Warning Score (MEWS: 0-8ish)
+    result["early_warning_score"] = (
         _mews_hr(hr) + _mews_sbp(sbp) + _mews_resp(resp) + _mews_temp(temp)
     ).fillna(0)
 
-    # Lactate / MAP ratio
+    # Lactate / blood pressure ratio
     with np.errstate(divide="ignore", invalid="ignore"):
         lm = lactate / map_col.replace(0, np.nan)
-    result["lactate_map_ratio"] = lm.clip(0, 10).fillna(0)
+    result["lactate_bp_ratio"] = lm.clip(0, 10).fillna(0)
 
     return result
 
@@ -352,8 +336,8 @@ def build_feature_matrix(
     * ICU length-of-stay (``ICULOS``)
     * Missingness flags (``{col}_measured`` for each lab column)
     * Time-since-measured (``{col}_hours_since`` for each lab column)
-    * Rolling statistics (``{col}_roll_{stat}``)
-    * Trend deltas (``{col}_delta``)
+    * Rolling statistics (``{col}_{avg_6h|std_6h|min_6h|max_6h}``)
+    * Trend features (``{col}_hourly_change``)
 
     Parameters
     ----------
@@ -378,8 +362,7 @@ def build_feature_matrix(
             "Ensure the raw data has been loaded correctly."
         )
 
-    enriched = add_iculos_normalized(df)
-    enriched = add_clinical_scores(enriched)
+    enriched = add_clinical_scores(df)
     enriched = add_dynamic_baselines(enriched)
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)

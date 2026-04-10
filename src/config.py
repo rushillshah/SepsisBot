@@ -36,17 +36,18 @@ ALL_INPUT_COLS = ALL_FEATURE_COLS + DEMOGRAPHIC_COLS + [TIME_COL]
 
 ROLLING_WINDOW_HOURS = 6
 ROLLING_STATS = ["mean", "min", "max", "std"]
-CLINICAL_SCORE_COLS = ["sirs_score", "qsofa_mod", "shock_index", "mews_mod", "lactate_map_ratio"]
+ROLLING_STAT_SUFFIXES = {"mean": "avg_6h", "min": "min_6h", "max": "max_6h", "std": "std_6h"}
+CLINICAL_SCORE_COLS = ["inflammation_score", "sepsis_screen_score", "shock_index", "early_warning_score", "lactate_bp_ratio"]
 
 DYNAMIC_BASELINE_FEATURES = VITAL_COLS + LAB_COLS
-DYNAMIC_DEVIATION_COLS = [f"{v}_dynamic_dev" for v in DYNAMIC_BASELINE_FEATURES]
+DYNAMIC_DEVIATION_COLS = [f"{v}_baseline_dev" for v in DYNAMIC_BASELINE_FEATURES]
 CUSUM_SLACK = 0.5
 CUSUM_THRESHOLD = 4.0
 
 # Only roll deviations for vitals + key labs (not all 34 — rarely-measured lab
 # deviations are mostly zeros, rolling stats on zeros is pure noise)
 KEY_LAB_COLS = ["Lactate", "WBC", "Creatinine", "Platelets"]
-KEY_DEVIATION_COLS = [f"{v}_dynamic_dev" for v in VITAL_COLS + KEY_LAB_COLS]
+KEY_DEVIATION_COLS = [f"{v}_baseline_dev" for v in VITAL_COLS + KEY_LAB_COLS]
 ROLLING_COLS = VITAL_COLS + KEY_LAB_COLS + CLINICAL_SCORE_COLS + KEY_DEVIATION_COLS
 
 # ── Features to Exclude (site-specific confounders) ────────────────────────

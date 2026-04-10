@@ -107,6 +107,83 @@ def compute_information_value(
     return df.sort_values("iv", ascending=False).reset_index(drop=True)
 
 
+def compute_woe_buckets(
+    X: pd.DataFrame,
+    y: pd.Series,
+    features: list[str] | None = None,
+    n_bins: int = 10,
+) -> dict[str, pd.DataFrame]:
+    """Compute WOE bucket detail for selected features.
+
+    For each feature, returns a DataFrame with one row per bucket showing
+    the value range, observation count, event rate, WOE, and IV contribution.
+
+    Parameters
+    ----------
+    X : pd.DataFrame
+        Feature matrix.
+    y : pd.Series
+        Binary target (1 = sepsis).
+    features : list[str] | None
+        Features to compute. Defaults to top 20 by IV.
+    n_bins : int
+        Number of quantile buckets.
+
+    Returns
+    -------
+    dict[str, pd.DataFrame]
+        Mapping of feature name to bucket-detail DataFrame.
+    """
+    if features is None:
+        iv_df = compute_information_value(X, y)
+        features = iv_df.head(20)["feature"].tolist()
+
+    total_events = y.sum()
+    total_non_events = len(y) - total_events
+    result = {}
+
+    for col in features:
+        if col not in X.columns:
+            continue
+        values = X[col]
+        if values.nunique() <= 1:
+            continue
+
+        try:
+            bins = pd.qcut(values, q=n_bins, duplicates="drop")
+        except ValueError:
+            continue
+
+        rows = []
+        for bucket, group_idx in y.groupby(bins):
+            events = group_idx.sum()
+            non_events = len(group_idx) - events
+            event_rate = events / len(group_idx) if len(group_idx) > 0 else 0
+
+            events_s = events + 0.5
+            non_events_s = non_events + 0.5
+            n_cats = len(bins.cat.categories)
+            dist_e = events_s / (total_events + 0.5 * n_cats)
+            dist_ne = non_events_s / (total_non_events + 0.5 * n_cats)
+
+            woe = float(np.log(dist_e / dist_ne))
+            iv_contrib = float((dist_e - dist_ne) * woe) if np.isfinite(woe) else 0.0
+
+            rows.append({
+                "bucket": str(bucket),
+                "count": int(len(group_idx)),
+                "events": int(events),
+                "event_rate": round(float(event_rate), 4),
+                "woe": round(woe, 4),
+                "iv_contribution": round(iv_contrib, 4),
+            })
+
+        if rows:
+            result[col] = pd.DataFrame(rows)
+
+    return result
+
+
 # ── Gain-Based Importance ────────────────────────────────────────────────────
 
 

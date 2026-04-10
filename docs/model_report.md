@@ -136,25 +136,24 @@ Three columns were **dropped** as site-specific confounders:
 | Raw vitals | 8 | HR, O2Sat, Temp, SBP, MAP, DBP, Resp, EtCO2 |
 | Raw labs | 26 | WBC, Hgb, Platelets, Lactate, Creatinine, Bilirubin, etc. |
 | Demographics | 2 | Age, Gender (after dropping Unit1, Unit2, HospAdmTime) |
-| Time | 1 | ICULOS (hours in ICU) |
 | Missingness flags | 34 | `{col}_measured` — binary indicator per vital/lab per hour |
 | Time since measurement | 34 | `{col}_hours_since` — hours since last measurement per patient |
-| Rolling window stats | 48 | 6-hour rolling mean, min, max, std for key vitals and labs |
-| Trend features | 8 | Hour-over-hour deltas for each vital sign |
-| **Total** | **161** | |
+| Rolling window stats (6h) | 48 | `{col}_avg_6h`, `{col}_min_6h`, `{col}_max_6h`, `{col}_std_6h` |
+| Hourly change | 8 | `{col}_hourly_change` — hour-over-hour difference per vital |
+| **Total** | **160** | |
 
 ### Rolling Window Features
 
 Computed over a **6-hour trailing window** per patient for key vitals (HR, O2Sat, Temp, SBP, MAP, DBP, Resp, EtCO2) and key labs (Lactate, Creatinine, WBC, Platelets):
 
-- Rolling mean
-- Rolling min
-- Rolling max
-- Rolling standard deviation
+- 6-hour average (`_avg_6h`)
+- 6-hour minimum (`_min_6h`)
+- 6-hour maximum (`_max_6h`)
+- 6-hour standard deviation (`_std_6h`)
 
-### Trend Features
+### Hourly Change Features
 
-Hour-over-hour delta (current - previous) for each of the 8 vital signs. Captures acute deterioration.
+Hour-over-hour change (`_hourly_change`) for each of the 8 vital signs. Captures acute deterioration.
 
 ### Feature Scaling
 
@@ -278,12 +277,12 @@ Three complementary methods were used to identify the most predictive features:
 
 | Feature | Why It Matters |
 |---------|---------------|
-| **Lactate** (and rolling stats) | Consistently top-ranked across all three methods. Clinically validated biomarker of tissue hypoperfusion in sepsis. |
-| **Temperature** (rolling max) | Fever is a hallmark of the systemic inflammatory response in sepsis. |
-| **Creatinine** (rolling max) | Elevated creatinine indicates acute kidney injury, a common organ failure in sepsis. |
+| **Lactate** (and 6h stats) | Consistently top-ranked across all three methods. Clinically validated biomarker of tissue hypoperfusion in sepsis. |
+| **Temperature** (max_6h) | Fever is a hallmark of the systemic inflammatory response in sepsis. |
+| **Creatinine** (max_6h) | Elevated creatinine indicates acute kidney injury, a common organ failure in sepsis. |
 | **Lab testing frequency** (hours_since features) | Sicker patients are tested more often. The pattern of clinical attention is itself a predictive signal. |
-| **Heart rate** (trend, rolling) | Tachycardia is an early compensatory response to infection and hemodynamic instability. |
-| **Respiratory rate** (trend, rolling) | Tachypnea is a component of the qSOFA sepsis screening score. |
+| **Heart rate** (hourly_change, 6h stats) | Tachycardia is an early compensatory response to infection and hemodynamic instability. |
+| **Respiratory rate** (hourly_change, 6h stats) | Tachypnea is a component of the sepsis screening score. |
 
 ### SHAP Visualizations
 

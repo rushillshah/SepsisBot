@@ -9,6 +9,7 @@ from src.config import (
     EXCLUDED_FEATURES,
     LAB_COLS,
     ROLLING_COLS,
+    ROLLING_STAT_SUFFIXES,
     ROLLING_STATS,
     ROLLING_WINDOW_HOURS,
     VITAL_COLS,
@@ -113,7 +114,8 @@ class TestRollingFeatures:
         result = add_rolling_features(imputed_df)
         for col in _present_rolling_cols(imputed_df):
             for stat in ROLLING_STATS:
-                expected_name = f"{col}_roll_{stat}"
+                suffix = ROLLING_STAT_SUFFIXES[stat]
+                expected_name = f"{col}_{suffix}"
                 assert expected_name in result.columns, (
                     f"Missing rolling column: {expected_name}"
                 )
@@ -128,7 +130,7 @@ class TestRollingFeatures:
 
         for col in _present_rolling_cols(imputed_df):
             first_val = p1.iloc[0][col]
-            first_roll_mean = p1.iloc[0][f"{col}_roll_mean"]
+            first_roll_mean = p1.iloc[0][f"{col}_avg_6h"]
             assert first_roll_mean == pytest.approx(first_val), (
                 f"Rolling mean at hour 1 for {col} should equal the raw value "
                 f"({first_val}), got {first_roll_mean}"
@@ -146,7 +148,7 @@ class TestRollingFeatures:
         # but window=6 so only the last 6 are included.
         expected_vals = [p1.iloc[i][col] for i in range(1, 7)]
         expected_mean = sum(expected_vals) / len(expected_vals)
-        actual_mean = p1.iloc[6][f"{col}_roll_mean"]
+        actual_mean = p1.iloc[6][f"{col}_avg_6h"]
         assert actual_mean == pytest.approx(expected_mean, rel=1e-6)
 
     def test_single_observation_std_is_zero(
@@ -157,7 +159,7 @@ class TestRollingFeatures:
         p1 = result[result["patient_id"] == "p001"]
 
         for col in _present_rolling_cols(imputed_df):
-            std_val = p1.iloc[0][f"{col}_roll_std"]
+            std_val = p1.iloc[0][f"{col}_std_6h"]
             assert std_val == 0.0, (
                 f"Expected 0.0 for single-obs std of {col}, got {std_val}"
             )
@@ -178,7 +180,7 @@ class TestTrendFeatures:
     def test_delta_columns_created(self, imputed_df: pd.DataFrame) -> None:
         result = add_trend_features(imputed_df)
         for col in VITAL_COLS:
-            assert f"{col}_delta" in result.columns
+            assert f"{col}_hourly_change" in result.columns
 
     def test_delta_values_match_expected(
         self, imputed_df: pd.DataFrame
@@ -188,12 +190,12 @@ class TestTrendFeatures:
         p1 = result[result["patient_id"] == "p001"]
 
         for col in VITAL_COLS:
-            # First hour delta is 0.0 (fillna)
-            assert p1.iloc[0][f"{col}_delta"] == pytest.approx(0.0)
+            # First hour hourly_change is 0.0 (fillna)
+            assert p1.iloc[0][f"{col}_hourly_change"] == pytest.approx(0.0)
             # Subsequent hours: each value increases by 1.0
             for i in range(1, len(p1)):
-                assert p1.iloc[i][f"{col}_delta"] == pytest.approx(1.0), (
-                    f"{col}_delta at row {i} should be 1.0"
+                assert p1.iloc[i][f"{col}_hourly_change"] == pytest.approx(1.0), (
+                    f"{col}_hourly_change at row {i} should be 1.0"
                 )
 
     def test_first_hour_delta_is_zero(self, imputed_df: pd.DataFrame) -> None:
@@ -202,7 +204,7 @@ class TestTrendFeatures:
         for pid in ("p001", "p002"):
             patient = result[result["patient_id"] == pid]
             for col in VITAL_COLS:
-                assert patient.iloc[0][f"{col}_delta"] == 0.0
+                assert patient.iloc[0][f"{col}_hourly_change"] == 0.0
 
     def test_deltas_independent_per_patient(
         self, imputed_df: pd.DataFrame
@@ -212,7 +214,7 @@ class TestTrendFeatures:
         p2 = result[result["patient_id"] == "p002"]
 
         for col in VITAL_COLS:
-            assert p2.iloc[0][f"{col}_delta"] == 0.0
+            assert p2.iloc[0][f"{col}_hourly_change"] == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -257,12 +259,12 @@ class TestBuildFeatureMatrix:
         X, _ = build_feature_matrix(imputed_df)
 
         # Spot-check a few rolling columns
-        assert f"{VITAL_COLS[0]}_roll_mean" in X.columns
-        assert f"{VITAL_COLS[0]}_roll_std" in X.columns
+        assert f"{VITAL_COLS[0]}_avg_6h" in X.columns
+        assert f"{VITAL_COLS[0]}_std_6h" in X.columns
 
-        # Spot-check delta columns
+        # Spot-check hourly change columns
         for col in VITAL_COLS:
-            assert f"{col}_delta" in X.columns
+            assert f"{col}_hourly_change" in X.columns
 
 
 # ---------------------------------------------------------------------------

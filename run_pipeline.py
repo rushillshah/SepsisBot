@@ -211,9 +211,24 @@ def run() -> None:
         dashboard_json["lr_fpr"] = fpr_lr.tolist()
         dashboard_json["lr_tpr"] = tpr_lr.tolist()
 
-    # Feature importance from existing feature_analysis files (no recompute)
-    import os
+    # Feature importance — compute fresh IV + WOE buckets
+    print("  Computing feature importance (IV, WOE buckets) ...")
+    from src.feature_importance import compute_information_value, compute_woe_buckets
+    iv_df = compute_information_value(X_all, y_early)
     fa_dir = DATA_PROCESSED / "feature_analysis"
+    fa_dir.mkdir(parents=True, exist_ok=True)
+    iv_df.to_csv(fa_dir / "iv_ranking.csv", index=False)
+    dashboard_json["iv_top20"] = iv_df.head(20).to_dict(orient="records")
+
+    # WOE buckets for top 20 features by IV
+    top_features = iv_df.head(20)["feature"].tolist()
+    woe_buckets = compute_woe_buckets(X_all, y_early, features=top_features)
+    woe_json = {k: v.to_dict(orient="records") for k, v in woe_buckets.items()}
+    with open(fa_dir / "woe_buckets.json", "w") as f:
+        json.dump(woe_json, f, indent=2)
+    print(f"  Saved IV ranking + WOE buckets for {len(woe_json)} features")
+
+    # Load existing feature importance if available (gain, SHAP from prior runs)
     if (fa_dir / "shap_ranking.csv").exists():
         import pandas as pd
         shap_df = pd.read_csv(fa_dir / "shap_ranking.csv")

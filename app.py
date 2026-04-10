@@ -401,6 +401,75 @@ def page_performance():
             fmt_df = fmt_df.rename(columns=rename)
             st.dataframe(fmt_df, use_container_width=True, hide_index=True)
 
+    # ── Sustained Alert Analysis ────────────────────────────────────
+    consec_data = metrics.get("consecutive_alert_analysis")
+    if consec_data:
+        st.markdown("### Sustained Alert Mode")
+        st.markdown(
+            '<div class="metric-explanation">'
+            '<b>Problem:</b> The default "any single hour above threshold" rule generates too many '
+            'false alarms — one noisy spike in a 5-day stay flags the whole patient.<br><br>'
+            '<b>Solution:</b> Require multiple <i>consecutive</i> hours above threshold before alerting. '
+            'This filters out transient spikes while catching real deterioration trends.</div>',
+            unsafe_allow_html=True,
+        )
+
+        ca_df = pd.DataFrame(consec_data)
+
+        # Let user pick min_consecutive to explore
+        min_c_options = sorted(ca_df["min_consecutive"].unique())
+        selected_min_c = st.select_slider(
+            "Minimum consecutive hours required",
+            options=min_c_options,
+            value=3,
+            help="How many hours in a row must the risk score stay above threshold to trigger an alert?",
+        )
+
+        filtered = ca_df[ca_df["min_consecutive"] == selected_min_c].copy()
+        for col in ["sensitivity", "specificity", "precision"]:
+            filtered[col] = filtered[col].map(lambda x: f"{x:.1%}")
+
+        display = filtered[["threshold", "sensitivity", "specificity", "precision", "flagged"]].copy()
+        if "median_early_warning_hours" in filtered.columns:
+            display["median_early_warning_hours"] = filtered["median_early_warning_hours"].map(
+                lambda x: f"{x:.1f}h" if pd.notna(x) and x != "None" else "N/A"
+            )
+        display = display.rename(columns={
+            "threshold": "Threshold",
+            "sensitivity": "Sensitivity",
+            "specificity": "Specificity",
+            "precision": "Precision",
+            "flagged": "Patients Flagged",
+            "median_early_warning_hours": "Median Early Warning",
+        })
+        st.dataframe(display, use_container_width=True, hide_index=True)
+
+        # Compare best consecutive vs best any-hour at similar sensitivity
+        if threshold_data:
+            any_hour_30 = next((r for r in threshold_data if abs(r["threshold"] - 0.30) < 0.001), None)
+            best_consec = ca_df[(ca_df["min_consecutive"] == selected_min_c)].sort_values("precision", ascending=False)
+            # Find row with sensitivity >= 0.75
+            viable = best_consec[best_consec["sensitivity"].apply(lambda x: float(x) if isinstance(x, str) else x) >= 0.75]
+            if not viable.empty and any_hour_30:
+                best = viable.iloc[0]
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown(
+                        f'<div class="metric-explanation">'
+                        f'<b>Any-Hour Alert (t=0.30):</b><br>'
+                        f'Precision: {any_hour_30["patient_precision"]:.1%} | '
+                        f'Flagged: {any_hour_30["total_flagged"]:,}</div>',
+                        unsafe_allow_html=True,
+                    )
+                with c2:
+                    st.markdown(
+                        f'<div class="metric-explanation">'
+                        f'<b>Sustained Alert (t={best["threshold"]}, {selected_min_c}h):</b><br>'
+                        f'Precision: {best["precision"]:.1%} | '
+                        f'Flagged: {best["flagged"]:,}</div>',
+                        unsafe_allow_html=True,
+                    )
+
     # ── Overfit Check ────────────────────────────────────────────────
     overfit_table = metrics.get("cv_overfit_table")
     if overfit_table:

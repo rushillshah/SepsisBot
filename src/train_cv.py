@@ -23,7 +23,9 @@ from src.config import (
     DEFAULT_THRESHOLD,
     INNER_CV_FOLDS,
     LABEL_COL,
+    MIN_CONSECUTIVE_HOURS,
     RANDOM_STATE,
+    TIME_COL,
     XGBOOST_PARAM_GRID_V2,
 )
 from src.evaluate import compute_metrics, find_optimal_threshold
@@ -75,6 +77,7 @@ def _train_fold(
     y_train_labels: np.ndarray,
     y_eval_labels: np.ndarray,
     patient_ids: np.ndarray,
+    iculos: np.ndarray,
     train_idx: np.ndarray,
     val_idx: np.ndarray,
     fold_num: int,
@@ -90,6 +93,7 @@ def _train_fold(
     y_val = y_eval_labels[val_idx]
     val_pids = patient_ids[val_idx]
     val_labels_raw = y_eval_labels[val_idx]
+    val_iculos = iculos[val_idx]
 
     # ── Oversample sepsis rows (numpy index repetition, no DataFrame concat) ─
     sepsis_idx = np.where(y_train == 1)[0]
@@ -137,7 +141,7 @@ def _train_fold(
         scoring="roc_auc",
         cv=inner_cv,
         random_state=RANDOM_STATE,
-        n_jobs=2,
+        n_jobs=1,
         verbose=0,
     )
     search.fit(X_train, y_train)
@@ -184,6 +188,7 @@ def _train_fold(
         "xgb_patient_cm": xgb_patient_cm,
         "val_patient_ids": val_pids,
         "val_labels": val_labels_raw,
+        "val_iculos": val_iculos,
         "scaler": scaler,
     }
 
@@ -193,6 +198,7 @@ def cross_validate_pipeline(
     y_train_labels: np.ndarray,
     patient_ids: np.ndarray,
     y_eval_labels: np.ndarray,
+    iculos: np.ndarray | None = None,
 ) -> dict:
     """Run patient-level stratified CV on pre-computed features.
 
@@ -206,7 +212,11 @@ def cross_validate_pipeline(
         Patient ID per row, aligned with X.
     y_eval_labels : np.ndarray
         Original SepsisLabel for evaluation metrics.
+    iculos : np.ndarray, optional
+        ICU length-of-stay hours per row (for consecutive-hour alert analysis).
     """
+    if iculos is None:
+        iculos = np.arange(len(X), dtype=float)
     print("=" * 60)
     print("SEPSIS PREDICTION — PATIENT-LEVEL STRATIFIED CV")
     print(f"  Folds: {CV_FOLDS} | n_iter: {CV_N_ITER} | random_state: {RANDOM_STATE}")
@@ -219,7 +229,7 @@ def cross_validate_pipeline(
     for i, (train_idx, val_idx) in enumerate(folds, start=1):
         print(f"\n[Fold {i}/{CV_FOLDS}]  train={len(train_idx):,} rows  val={len(val_idx):,} rows")
         result = _train_fold(
-            X, y_train_labels, y_eval_labels, patient_ids,
+            X, y_train_labels, y_eval_labels, patient_ids, iculos,
             train_idx, val_idx, fold_num=i,
         )
         fold_results.append(result)
@@ -255,10 +265,19 @@ def cross_validate_pipeline(
     all_labels = np.concatenate([r["val_labels"] for r in fold_results])
     all_xgb_probs = np.concatenate([r["xgb_prob"] for r in fold_results])
     all_lr_probs = np.concatenate([r["lr_prob"] for r in fold_results])
+    all_iculos = np.concatenate([r["val_iculos"] for r in fold_results])
 
     # Patient-level threshold analysis on concat
-    from src.threshold_analysis import patient_level_at_thresholds, plot_threshold_tradeoff
-    concat_df = pd.DataFrame({"patient_id": all_patient_ids, LABEL_COL: all_labels})
+    from src.threshold_analysis import (
+        consecutive_hour_alerts,
+        patient_level_at_thresholds,
+        plot_threshold_tradeoff,
+    )
+    concat_df = pd.DataFrame({
+        "patient_id": all_patient_ids,
+        LABEL_COL: all_labels,
+        TIME_COL: all_iculos,
+    })
     thresholds = [0.01, 0.02, 0.03, 0.05, 0.07, 0.10, 0.15, 0.20, 0.25, 0.30, 0.50]
     threshold_table = patient_level_at_thresholds(concat_df, all_xgb_probs, thresholds)
 
@@ -267,6 +286,30 @@ def cross_validate_pipeline(
 
     from src.config import DATA_PROCESSED
     plot_threshold_tradeoff(threshold_table, save_path=str(DATA_PROCESSED / "threshold_tradeoff.png"))
+
+    # ── Consecutive-hour alert analysis ──────────────────────────────────────
+    consecutive_results = []
+    for t in [0.10, 0.15, 0.20, 0.25, 0.30]:
+        for min_c in [2, 3, 4, 5]:
+            ca = consecutive_hour_alerts(concat_df, all_xgb_probs, threshold=t, min_consecutive=min_c)
+            tp = int((ca["actual_sepsis"] & ca["sustained_alert"]).sum())
+            fn = int((ca["actual_sepsis"] & ~ca["sustained_alert"]).sum())
+            fp = int((~ca["actual_sepsis"] & ca["sustained_alert"]).sum())
+            tn = int((~ca["actual_sepsis"] & ~ca["sustained_alert"]).sum())
+            sens = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            median_warning = ca.loc[ca["early_warning_hours"].notna(), "early_warning_hours"].median()
+            consecutive_results.append({
+                "threshold": t, "min_consecutive": min_c,
+                "sensitivity": sens, "specificity": spec, "precision": prec,
+                "flagged": tp + fp, "total": len(ca),
+                "median_early_warning_hours": float(median_warning) if pd.notna(median_warning) else None,
+            })
+
+    consecutive_table = pd.DataFrame(consecutive_results)
+    print("\n  CONSECUTIVE-HOUR ALERT ANALYSIS (sustained alerts)")
+    print(consecutive_table[["threshold", "min_consecutive", "sensitivity", "specificity", "precision", "flagged"]].to_string(index=False))
 
     _print_summary(avg_xgb_metrics, avg_lr_metrics, overfit_table, avg_patient_cm)
 
@@ -278,6 +321,7 @@ def cross_validate_pipeline(
         "avg_patient_metrics": avg_patient_cm,
         "total_patient_cm": total_cm,
         "threshold_analysis": threshold_table.to_dict(orient="records"),
+        "consecutive_alert_analysis": consecutive_table.to_dict(orient="records"),
         "concat_predictions": {
             "patient_ids": all_patient_ids,
             "labels": all_labels,

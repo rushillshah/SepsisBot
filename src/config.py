@@ -171,6 +171,10 @@ CLINICAL_NORMAL_RANGES: dict[str, dict[tuple[str, int], tuple[float, float]]] = 
 
 NORMAL_RANGE_FEATURE_SUFFIXES = ["_above_normal", "_below_normal", "_deviation_from_normal"]
 
+# ── Alert Aggregation ─────────────────────────────────────────────────────────
+
+MIN_CONSECUTIVE_HOURS = 3  # Require N sustained hours above threshold to flag a patient
+
 CV_N_ITER = 5
 
 CV_FOLDS = 3

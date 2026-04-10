@@ -120,6 +120,7 @@ def run() -> None:
     feature_names = list(X_all.columns)
     patient_ids = imputed_df["patient_id"].to_numpy()
     eval_labels = imputed_df["SepsisLabel"].to_numpy()
+    iculos = imputed_df["ICULOS"].to_numpy()
     print(f"  Features: {len(feature_names)}, Rows: {len(X_all):,}")
 
     # Free imputed_df — no longer needed, X_all has everything
@@ -128,7 +129,7 @@ def run() -> None:
 
     # ── 3. Patient-level cross-validation (ALL metrics come from here) ────
     print("\n[Step 3/4] Running patient-level cross-validation ...")
-    cv_results = cross_validate_pipeline(X_all, y_early.to_numpy(), patient_ids, eval_labels)
+    cv_results = cross_validate_pipeline(X_all, y_early.to_numpy(), patient_ids, eval_labels, iculos=iculos)
 
     last_fold = cv_results["fold_results"][-1]
     best_params = last_fold.get("xgb_best_params", {})
@@ -188,6 +189,9 @@ def run() -> None:
 
     # Threshold analysis from honest CV concat (already computed in cross_validate_pipeline)
     dashboard_json["threshold_analysis"] = cv_results.get("threshold_analysis", [])
+
+    # Consecutive-hour alert analysis
+    dashboard_json["consecutive_alert_analysis"] = cv_results.get("consecutive_alert_analysis", [])
 
     # Patient-level metrics at default threshold
     ta = cv_results.get("threshold_analysis", [])

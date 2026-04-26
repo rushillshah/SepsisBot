@@ -272,6 +272,14 @@ def page_performance():
         no_data_warning()
         return
 
+    excl = metrics.get("exclusion_note")
+    if excl:
+        st.info(
+            f"**Exclusions applied:** {excl['early_onset_patients_excluded']} sepsis patients "
+            f"with onset ≤ 6h ICU excluded from all metrics (already septic on admission — unpredictable). "
+            f"First 6 hours of all other patients are included in training."
+        )
+
     # ── Model Comparison (309 vs Top 100 features) ────────────────
     comparison = metrics.get("model_comparison")
     if comparison:

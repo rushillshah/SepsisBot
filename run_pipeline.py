@@ -123,6 +123,30 @@ def run() -> None:
     iculos = imputed_df["ICULOS"].to_numpy()
     print(f"  Features: {len(feature_names)}, Rows: {len(X_all):,}")
 
+    # ── Exclusion: early-onset sepsis patients ────────────────────────────
+    # Patients whose first SepsisLabel=1 is at ICULOS ≤ 6 are already septic
+    # on admission — unpredictable at the time of admission, and inflate
+    # metrics as easy TPs. Exclude them entirely from training and evaluation.
+    # First 6 hours of all other patients are kept (valid training signal).
+    import pandas as pd
+    onset_hours = (
+        imputed_df[imputed_df["SepsisLabel"] == 1]
+        .groupby("patient_id")["ICULOS"].min()
+    )
+    early_onset_pids = set(onset_hours[onset_hours <= 6].index)
+    pid_series = pd.Series(patient_ids)
+    mask = ~pid_series.isin(early_onset_pids).values
+    n_excluded_patients = len(early_onset_pids)
+    n_excluded_rows = int((~mask).sum())
+    print(f"  Excluded {n_excluded_patients} early-onset sepsis patients (onset ≤ 6h)")
+    print(f"  Excluded {n_excluded_rows:,} rows belonging to those patients")
+    X_all = X_all[mask]
+    y_early = y_early[mask]
+    eval_labels = eval_labels[mask]
+    patient_ids = patient_ids[mask]
+    iculos = iculos[mask]
+    print(f"  Remaining: {len(X_all):,} rows, {len(set(patient_ids)):,} patients")
+
     # Free imputed_df — no longer needed, X_all has everything
     del imputed_df, raw_df
     gc.collect()
@@ -144,6 +168,15 @@ def run() -> None:
     dashboard_json["n_features"] = len(feature_names)
     from src.config import DEFAULT_THRESHOLD
     dashboard_json["default_threshold"] = DEFAULT_THRESHOLD
+    dashboard_json["exclusion_note"] = {
+        "early_onset_patients_excluded": n_excluded_patients,
+        "rows_excluded": n_excluded_rows,
+        "reason": (
+            f"{n_excluded_patients} sepsis patients with onset ≤ 6h ICU excluded "
+            f"(already septic on admission — unpredictable). "
+            f"First 6 hours of all patients kept for training (valid signal)."
+        ),
+    }
 
     # Per-fold detail for dashboard
     fold_detail = []

@@ -8,9 +8,10 @@ All functions operate on immutable inputs — no DataFrames or arrays are
 modified in place.
 """
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.metrics import (
     auc,
     confusion_matrix,
@@ -23,6 +24,9 @@ from sklearn.metrics import (
 )
 
 from src.config import LABEL_COL, TIME_COL
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────────
@@ -146,11 +150,13 @@ _PLOT_STYLE = "seaborn-v0_8-whitegrid"
 
 def _apply_plot_style() -> None:
     """Set the shared matplotlib style for all evaluation plots."""
+    import matplotlib.pyplot as plt
     plt.style.use(_PLOT_STYLE)
 
 
-def _save_or_show(fig: plt.Figure, save_path: str | None) -> None:
+def _save_or_show(fig: "Figure", save_path: str | None) -> None:
     """Save figure to *save_path* if provided, otherwise display it."""
+    import matplotlib.pyplot as plt
     if save_path is not None:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
@@ -181,6 +187,7 @@ def plot_roc_curves(
     if not results:
         raise ValueError("results dict must contain at least one model.")
 
+    import matplotlib.pyplot as plt
     _apply_plot_style()
     fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -244,6 +251,7 @@ def plot_feature_importance(
     top_names = top_names[::-1]
     top_values = top_values[::-1]
 
+    import matplotlib.pyplot as plt
     _apply_plot_style()
     fig, ax = plt.subplots(figsize=(10, max(6, top_n * 0.35)))
 

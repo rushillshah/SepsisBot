@@ -8,10 +8,6 @@ patient-level alerting behavior.
 import numpy as np
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
 from src.config import LABEL_COL, TIME_COL
 
 
@@ -158,11 +154,90 @@ def consecutive_hour_alerts(
     return pd.DataFrame(rows)
 
 
+def patient_intersection_at_thresholds(
+    full_preds: pd.DataFrame,
+    early_preds: pd.DataFrame,
+    thresholds: list[float] | None = None,
+) -> pd.DataFrame:
+    """Venn-style patient-level counts comparing two model variants.
+
+    For each model variant, take ``max(prob)`` per patient, then at each
+    threshold count how many patients are flagged by each model alone, by
+    both, by neither, and intersect that with the ground-truth sepsis label.
+
+    Parameters
+    ----------
+    full_preds, early_preds
+        DataFrames with columns ``patient_id``, ``label``, ``prob``. Both
+        come from concatenated CV predictions of the two variants. They are
+        inner-joined on ``patient_id`` so patients evaluated by only one
+        variant are excluded.
+    thresholds
+        Probability thresholds at which to compute the comparison.
+    """
+    if thresholds is None:
+        thresholds = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.50]
+
+    full_max = (
+        full_preds.groupby("patient_id")
+        .agg(prob_full=("prob", "max"), label_full=("label", "max"))
+    )
+    early_max = (
+        early_preds.groupby("patient_id")
+        .agg(prob_early=("prob", "max"), label_early=("label", "max"))
+    )
+
+    joined = full_max.join(early_max, how="inner")
+    actual = joined[["label_full", "label_early"]].max(axis=1).astype(int)
+
+    rows = []
+    total_patients = len(joined)
+    actual_sepsis = int((actual == 1).sum())
+
+    for t in thresholds:
+        flagged_full = joined["prob_full"] >= t
+        flagged_early = joined["prob_early"] >= t
+
+        both = flagged_full & flagged_early
+        neither = (~flagged_full) & (~flagged_early)
+        full_only = flagged_full & ~flagged_early
+        early_only = flagged_early & ~flagged_full
+
+        is_sepsis = actual == 1
+        tp_intersection = int((both & is_sepsis).sum())
+        fp_intersection = int((both & ~is_sepsis).sum())
+
+        sens_int = tp_intersection / actual_sepsis if actual_sepsis > 0 else 0.0
+        prec_int = tp_intersection / int(both.sum()) if int(both.sum()) > 0 else 0.0
+
+        rows.append({
+            "threshold": float(t),
+            "total_patients": total_patients,
+            "actual_sepsis": actual_sepsis,
+            "flagged_full": int(flagged_full.sum()),
+            "flagged_early": int(flagged_early.sum()),
+            "flagged_both": int(both.sum()),
+            "flagged_full_only": int(full_only.sum()),
+            "flagged_early_only": int(early_only.sum()),
+            "flagged_neither": int(neither.sum()),
+            "tp_intersection": tp_intersection,
+            "fp_intersection": fp_intersection,
+            "sensitivity_intersection": sens_int,
+            "precision_intersection": prec_int,
+        })
+
+    return pd.DataFrame(rows)
+
+
 def plot_threshold_tradeoff(
     patient_df: pd.DataFrame,
     save_path: str | None = None,
 ) -> None:
     """Plot patient-level sensitivity vs specificity vs precision across thresholds."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots(figsize=(10, 5))
 
     ax.plot(patient_df["threshold"], patient_df["patient_sensitivity"],

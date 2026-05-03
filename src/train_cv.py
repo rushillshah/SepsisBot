@@ -285,7 +285,10 @@ def cross_validate_pipeline(
     print(threshold_table[["threshold", "patient_sensitivity", "patient_specificity", "patient_precision", "total_flagged"]].to_string(index=False))
 
     from src.config import DATA_PROCESSED
-    plot_threshold_tradeoff(threshold_table, save_path=str(DATA_PROCESSED / "threshold_tradeoff.png"))
+    try:
+        plot_threshold_tradeoff(threshold_table, save_path=str(DATA_PROCESSED / "threshold_tradeoff.png"))
+    except ImportError as exc:
+        print(f"  [warn] threshold tradeoff PNG skipped (matplotlib unavailable): {exc}")
 
     # ── Consecutive-hour alert analysis ──────────────────────────────────────
     consecutive_results = []
@@ -327,6 +330,7 @@ def cross_validate_pipeline(
             "labels": all_labels,
             "xgb_probs": all_xgb_probs,
             "lr_probs": all_lr_probs,
+            "iculos": all_iculos,
         },
     }
 

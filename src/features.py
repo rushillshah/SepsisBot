@@ -165,15 +165,86 @@ def _cusum_changepoint(values: np.ndarray, k: float = CUSUM_SLACK, h: float = CU
     return len(values)
 
 
+def _causal_cusum_baselines(
+    values: np.ndarray,
+    k: float = CUSUM_SLACK,
+    h: float = CUSUM_THRESHOLD,
+) -> np.ndarray:
+    """Per-hour causal baseline via online CUSUM.
+
+    For each index t, returns the baseline that would be available *using
+    only values[:t+1]* — i.e., what a real-time bedside system could
+    compute. No future data leaks into earlier hours.
+
+    Algorithm:
+      * Hours 0..5: baseline is the running mean of values seen so far.
+        (CUSUM needs ≥6 points to seed μ, σ.)
+      * Hour ≥6 with no changepoint detected yet: baseline is the running
+        mean of all values observed up to and including hour t.
+      * Hour ≥6 with a changepoint detected at hour cp ≤ t: baseline is
+        frozen at mean(values[:cp]) — the pre-deterioration mean.
+
+    Reference μ, σ (used by the CUSUM normalizer) are seeded from the
+    first 6 values and never updated — matching the original
+    ``_cusum_changepoint``'s reference semantics.
+    """
+    n = len(values)
+    if n == 0:
+        return np.zeros(0)
+
+    baselines = np.zeros(n)
+
+    # Hours 0..min(n,6)-1: running mean only.
+    running_sum = 0.0
+    for t in range(min(n, 6)):
+        running_sum += values[t]
+        baselines[t] = running_sum / (t + 1)
+
+    if n < 6:
+        return baselines
+
+    # Reference μ, σ frozen from first 6 values.
+    mu = float(np.mean(values[:6]))
+    sigma = float(np.std(values[:6]))
+    if sigma == 0.0:
+        sigma = 1.0
+
+    s_high = 0.0
+    s_low = 0.0
+    frozen_baseline: float | None = None
+
+    for t in range(6, n):
+        if frozen_baseline is None:
+            z = (values[t] - mu) / sigma
+            s_high = max(0.0, s_high + z - k)
+            s_low = max(0.0, s_low - z - k)
+            if s_high > h or s_low > h:
+                # Changepoint detected at index t. Baseline frozen at mean
+                # of strictly pre-change values, i.e. values[:t]. running_sum
+                # currently holds sum(values[:t]) (we have not added values[t]
+                # yet on this iteration), so divide by t.
+                frozen_baseline = running_sum / t if t > 0 else 0.0
+                baselines[t] = frozen_baseline
+            else:
+                running_sum += values[t]
+                baselines[t] = running_sum / (t + 1)
+        else:
+            baselines[t] = frozen_baseline
+
+    return baselines
+
+
 def add_dynamic_baselines(df: pd.DataFrame) -> pd.DataFrame:
-    """Compute per-patient deviation from CUSUM-detected stable baseline.
+    """Compute per-(patient, hour) deviation from a *causal* CUSUM baseline.
 
-    For each feature in DYNAMIC_BASELINE_FEATURES, uses CUSUM change
-    detection to find the changepoint — the hour where the feature starts
-    deviating from normal. Baseline = mean of pre-changepoint values.
-    Deviation = current value - baseline mean.
+    For each feature in DYNAMIC_BASELINE_FEATURES, computes ``feature -
+    causal_baseline(t)`` where ``causal_baseline(t)`` is what a real-time
+    system would have established using only data up to and including hour
+    ``t``. See :func:`_causal_cusum_baselines` for the algorithm.
 
-    Replaces the static first-6h baseline with an adaptive one.
+    Replaces the previous (leaky) global per-patient CUSUM, which computed
+    a single changepoint over the entire stay and then subtracted that
+    baseline from every row — peeking into future data at early hours.
     """
     result = df.copy()
     sorted_df = result.sort_values(["patient_id", TIME_COL])
@@ -182,32 +253,19 @@ def add_dynamic_baselines(df: pd.DataFrame) -> pd.DataFrame:
         if feature not in result.columns:
             continue
 
-        # Per-patient CUSUM: find changepoint, compute baseline mean
-        baselines = {}
-        changepoints = {}
-        baseline_lengths = {}
-
+        deviations = pd.Series(0.0, index=result.index, dtype=float)
         for pid, group in sorted_df.groupby("patient_id"):
-            values = group[feature].dropna().values
-            if len(values) == 0:
-                baselines[pid] = 0.0
-                changepoints[pid] = 0
-                baseline_lengths[pid] = 0
+            values = group[feature].to_numpy(dtype=float, na_value=np.nan)
+            mask_valid = ~np.isnan(values)
+            if not mask_valid.any():
                 continue
+            filled = np.where(mask_valid, values, 0.0)
+            baselines = _causal_cusum_baselines(filled)
+            dev = filled - baselines
+            dev[~mask_valid] = 0.0
+            deviations.loc[group.index] = dev
 
-            cp = _cusum_changepoint(values)
-            baseline_vals = values[:cp]
-            baselines[pid] = float(np.mean(baseline_vals)) if len(baseline_vals) > 0 else 0.0
-            changepoints[pid] = int(group[TIME_COL].iloc[min(cp, len(group) - 1)])
-            baseline_lengths[pid] = len(baseline_vals)
-
-        # Map back to full DataFrame — only deviation, NOT metadata
-        # changepoint_hour and baseline_length are LEAKY (encode future info
-        # at early hours — at hour 1 the model would know the change happens
-        # at hour X). Confirmed via SHAP: these dominate importance = leakage.
-        result[f"{feature}_baseline_dev"] = (
-            result[feature] - result["patient_id"].map(baselines)
-        ).fillna(0.0)
+        result[f"{feature}_baseline_dev"] = deviations.fillna(0.0)
 
     return result
 

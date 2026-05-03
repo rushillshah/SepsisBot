@@ -86,6 +86,70 @@ def load_woe_data() -> dict | None:
         return json.load(f)
 
 
+@st.cache_data
+def early_warning_threshold_table(thresholds: tuple) -> pd.DataFrame | None:
+    """Patient-level threshold table for the early-warning variant.
+
+    Computed live from `cv_predictions_early.parquet`: per-patient max prob,
+    flagged at each threshold, then sens/spec/prec rolled up. Shape mirrors
+    the JSON `threshold_analysis` table for easy side-by-side rendering.
+    """
+    df = load_parquet("cv_predictions_early")
+    if df is None or "xgb_prob" not in df.columns:
+        return None
+    per_patient = df.groupby("patient_id").agg(
+        max_prob=("xgb_prob", "max"),
+        actual=("label", "max"),
+    )
+    actual = per_patient["actual"] == 1
+    n_actual = int(actual.sum())
+    n_no = int((~actual).sum())
+    rows = []
+    for t in thresholds:
+        flagged = per_patient["max_prob"] >= t
+        tp = int((flagged & actual).sum())
+        fp = int((flagged & ~actual).sum())
+        sens = tp / n_actual if n_actual > 0 else 0.0
+        spec = (n_no - fp) / n_no if n_no > 0 else 0.0
+        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        rows.append({
+            "threshold": float(t),
+            "patient_sensitivity": sens,
+            "patient_specificity": spec,
+            "patient_precision": prec,
+            "total_flagged": tp + fp,
+        })
+    return pd.DataFrame(rows)
+
+
+@st.cache_data
+def early_warning_confusion_matrix(threshold: float) -> dict | None:
+    """Patient-level confusion matrix for the early-warning variant.
+
+    Computed live from `cv_predictions_early.parquet`: max-prob per patient,
+    flagged if >= threshold. Returns None if the variant hasn't been run yet.
+    """
+    df = load_parquet("cv_predictions_early")
+    if df is None or "xgb_prob" not in df.columns:
+        return None
+    per_patient = df.groupby("patient_id").agg(
+        max_prob=("xgb_prob", "max"),
+        actual=("label", "max"),
+    )
+    flagged = per_patient["max_prob"] >= threshold
+    actual = per_patient["actual"] == 1
+    tp = int((flagged & actual).sum())
+    fp = int((flagged & ~actual).sum())
+    fn = int((~flagged & actual).sum())
+    tn = int((~flagged & ~actual).sum())
+    return {
+        "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+        "actual_sepsis": tp + fn,
+        "actual_no_sepsis": tn + fp,
+        "total_patients": tp + fp + fn + tn,
+    }
+
+
 def no_data_warning():
     st.error("No processed data found. Run `python run_pipeline.py` first.")
 
@@ -116,11 +180,18 @@ def page_overview():
         return
 
     # ── Overall Score ────────────────────────────────────────────────
-    auroc = metrics.get("cv_xgb_auroc", 0)
-    auroc_std = metrics.get("cv_xgb_auroc_std", 0)
+    # Headline numbers come from the early-warning variant when it has been
+    # generated (post-onset hours censored from training); otherwise fall back
+    # to the full-label numbers stored at the JSON top level.
+    ew = (metrics.get("label_variants") or {}).get("early_warning") or {}
+    auroc = ew.get("auroc") if ew else metrics.get("cv_xgb_auroc", 0)
+    auroc_std = ew.get("auroc_std") if ew else metrics.get("cv_xgb_auroc_std", 0)
     gini = 2 * auroc - 1
 
     st.markdown("### Model Score")
+    if ew:
+        st.caption("Headline numbers reflect the **early-warning variant** "
+                   "(post-onset hours censored from training).")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
@@ -141,7 +212,7 @@ def page_overview():
                     f'<b>Gini = 2 × AUROC − 1</b></div>',
                     unsafe_allow_html=True)
     with c3:
-        pr_auc = metrics.get("cv_xgb_pr_auc", 0)
+        pr_auc = ew.get("pr_auc") if ew else metrics.get("cv_xgb_pr_auc", 0)
         st.metric("PR-AUC", f"{pr_auc:.3f}" if pr_auc else "N/A",
                   help="Precision-Recall AUC. Unlike AUROC, PR-AUC is sensitive to class imbalance. With only 7.3% sepsis prevalence, this is a stricter measure of how well the model identifies the rare positive class.")
         st.markdown(f'<div class="metric-explanation">'
@@ -160,9 +231,9 @@ def page_overview():
     st.markdown("### What This Means in Practice")
 
     threshold = metrics.get("default_threshold", 0.30)
-    p_sens = metrics.get("patient_sensitivity", 0)
-    p_spec = metrics.get("patient_specificity", 0)
-    p_prec = metrics.get("patient_precision", 0)
+    p_sens = ew.get("patient_sensitivity") if ew else metrics.get("patient_sensitivity", 0)
+    p_spec = ew.get("patient_specificity") if ew else metrics.get("patient_specificity", 0)
+    p_prec = ew.get("patient_precision") if ew else metrics.get("patient_precision", 0)
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -188,7 +259,7 @@ def page_overview():
                     f'Higher = more trustworthy alerts.</div>',
                     unsafe_allow_html=True)
     with c4:
-        f1 = metrics.get("cv_xgb_f1", 0)
+        f1 = ew.get("f1") if ew else metrics.get("cv_xgb_f1", 0)
         st.metric("F1 Score", f"{f1:.3f}" if f1 else "N/A",
                   help="Harmonic mean of Precision and Sensitivity. F1 = 2 x (Precision x Sensitivity) / (Precision + Sensitivity). Balances catching sepsis cases vs. not overwhelming clinicians with false alarms.")
         st.markdown(f'<div class="metric-explanation">'
@@ -299,14 +370,16 @@ def page_performance():
             "Metric": ["AUROC", "Gini", "PR-AUC", "Overfit Gap", "Patient Sensitivity", "Patient Specificity", "Patient Precision", "Features"],
             f"Full ({full['n_features']} features)": [
                 f"{full['xgb_auroc']:.4f}", f"{full['xgb_gini']:.4f}", f"{full['xgb_pr_auc']:.4f}",
-                f"{full['overfit_gap']:.4f}", f"{full['patient_sensitivity']:.1%}",
-                f"{full['patient_specificity']:.1%}", f"{full['patient_precision']:.1%}",
+                f"{full['overfit_gap']:.4f}", f"{full.get('xgb_sensitivity', full.get('patient_sensitivity', 0)):.1%}",
+                f"{full.get('xgb_specificity', full.get('patient_specificity', 0)):.1%}",
+                f"{full.get('xgb_precision', full.get('patient_precision', 0)):.1%}",
                 str(full['n_features']),
             ],
             f"Top {slim['n_features']} features": [
                 f"{slim['xgb_auroc']:.4f}", f"{slim['xgb_gini']:.4f}", f"{slim['xgb_pr_auc']:.4f}",
-                f"{slim['overfit_gap']:.4f}", f"{slim['patient_sensitivity']:.1%}",
-                f"{slim['patient_specificity']:.1%}", f"{slim['patient_precision']:.1%}",
+                f"{slim['overfit_gap']:.4f}", f"{slim.get('xgb_sensitivity', slim.get('patient_sensitivity', 0)):.1%}",
+                f"{slim.get('xgb_specificity', slim.get('patient_specificity', 0)):.1%}",
+                f"{slim.get('xgb_precision', slim.get('patient_precision', 0)):.1%}",
                 str(slim['n_features']),
             ],
         }
@@ -338,18 +411,193 @@ def page_performance():
             )
             st.plotly_chart(fig_comp, use_container_width=True)
 
+    # ── Label Strategy Comparison: Full vs Early-Warning ─────────────
+    label_variants = metrics.get("label_variants")
+    if label_variants:
+        st.markdown("### Hourly (Full Label) vs Early-Warning Variant")
+        st.markdown(
+            '<div class="metric-explanation">'
+            'PhysioNet’s <b>SepsisLabel</b> stays on from 6 hours before clinical onset until '
+            'discharge, so the standard <b>Hourly (Full Label)</b> model trains on a mix of pre-onset '
+            'hours (the actual early-warning window) and already-septic hours (easy positives). '
+            'The <b>Early-Warning</b> variant censors those post-onset hours during training, so it '
+            'is only rewarded for catching the transition. AUROC will be lower — by design — '
+            'because the easy positives are gone.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        full_v = label_variants.get("full_label", {})
+        early_v = label_variants.get("early_warning", {})
+
+        def _fmt(v, pct=False, places=4):
+            if v is None:
+                return "—"
+            return f"{v:.1%}" if pct else f"{v:.{places}f}"
+
+        def _delta(a, b, pct=False):
+            if a is None or b is None:
+                return "—"
+            d = b - a
+            sign = "+" if d >= 0 else ""
+            return f"{sign}{d:.1%}" if pct else f"{sign}{d:.4f}"
+
+        comp_rows = [
+            ("AUROC", _fmt(full_v.get("auroc")), _fmt(early_v.get("auroc")),
+             _delta(full_v.get("auroc"), early_v.get("auroc"))),
+            ("PR-AUC", _fmt(full_v.get("pr_auc")), _fmt(early_v.get("pr_auc")),
+             _delta(full_v.get("pr_auc"), early_v.get("pr_auc"))),
+            ("Patient Sensitivity", _fmt(full_v.get("patient_sensitivity"), pct=True),
+             _fmt(early_v.get("patient_sensitivity"), pct=True),
+             _delta(full_v.get("patient_sensitivity"), early_v.get("patient_sensitivity"), pct=True)),
+            ("Patient Specificity", _fmt(full_v.get("patient_specificity"), pct=True),
+             _fmt(early_v.get("patient_specificity"), pct=True),
+             _delta(full_v.get("patient_specificity"), early_v.get("patient_specificity"), pct=True)),
+            ("Patient Precision", _fmt(full_v.get("patient_precision"), pct=True),
+             _fmt(early_v.get("patient_precision"), pct=True),
+             _delta(full_v.get("patient_precision"), early_v.get("patient_precision"), pct=True)),
+            ("Rows trained on",
+             f"{full_v.get('n_rows', 0):,}" if full_v.get('n_rows') else "—",
+             f"{early_v.get('n_rows', 0):,}" if early_v.get('n_rows') else "—",
+             ""),
+        ]
+        comp_df = pd.DataFrame(
+            comp_rows,
+            columns=["Metric", "Hourly (Full)", "Early-Warning", "Δ (Early − Full)"],
+        )
+        st.dataframe(comp_df, use_container_width=True, hide_index=True)
+
+        if early_v.get("n_rows_censored"):
+            st.caption(
+                f"Censoring removed {early_v['n_rows_censored']:,} post-onset rows from "
+                f"{early_v['n_patients_with_censored_rows']:,} septic patients."
+            )
+
+        # ── Overlaid ROC curves ──────────────────────────────────────
+        full_fpr = full_v.get("fpr", [])
+        full_tpr = full_v.get("tpr", [])
+        early_fpr = early_v.get("fpr", [])
+        early_tpr = early_v.get("tpr", [])
+
+        if full_fpr and early_fpr:
+            fig_lv = go.Figure()
+            fig_lv.add_trace(go.Scatter(
+                x=full_fpr, y=full_tpr, mode="lines",
+                name=f"Hourly (Full) (AUROC={full_v.get('auroc', 0):.3f})",
+                line=dict(color="#1f77b4", width=2.5),
+            ))
+            fig_lv.add_trace(go.Scatter(
+                x=early_fpr, y=early_tpr, mode="lines",
+                name=f"Early-Warning (AUROC={early_v.get('auroc', 0):.3f})",
+                line=dict(color="#ff7f0e", width=2.5),
+            ))
+            fig_lv.add_trace(go.Scatter(
+                x=[0, 1], y=[0, 1], mode="lines",
+                name="Random (0.500)", line=dict(color="gray", dash="dash", width=1),
+            ))
+            fig_lv.update_layout(
+                xaxis_title="False Positive Rate", yaxis_title="True Positive Rate",
+                height=400, legend=dict(x=0.4, y=0.15),
+                template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            )
+            st.plotly_chart(fig_lv, use_container_width=True)
+
+        # ── Patient-level intersection ───────────────────────────────
+        intersection = label_variants.get("intersection", {})
+        rows = intersection.get("rows", [])
+        thresholds = intersection.get("thresholds", [])
+        if rows and thresholds:
+            st.markdown("#### Patient-Level Agreement")
+            st.markdown(
+                '<div class="metric-explanation">'
+                'A patient is <b>flagged</b> by a model if their maximum hourly score '
+                'reaches the threshold at any point during their ICU stay. The numbers below '
+                'show how many patients each variant flags and where they overlap with the actual '
+                'sepsis cohort.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            default_t = 0.30 if 0.30 in thresholds else thresholds[len(thresholds) // 2]
+            selected_t = st.select_slider(
+                "Threshold for patient-level flagging",
+                options=thresholds,
+                value=default_t,
+                key="label_variant_threshold",
+            )
+            row = next(
+                (r for r in rows if abs(r["threshold"] - selected_t) < 1e-6),
+                None,
+            )
+            if row:
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Actual Sepsis Patients", f"{row['actual_sepsis']:,}",
+                          help="Ground-truth sepsis cohort, after exclusions.")
+                m2.metric("Flagged by Hourly (Full)", f"{row['flagged_full']:,}",
+                          help="Patients with max hourly score ≥ threshold under the full-label model.")
+                m3.metric("Flagged by Early-Warning", f"{row['flagged_early']:,}",
+                          help="Patients with max hourly score ≥ threshold under the early-warning model.")
+                m4.metric("Flagged by Both", f"{row['flagged_both']:,}",
+                          help="Patients flagged by both models — the strong-signal cohort.")
+
+                tp_int = row["tp_intersection"]
+                fp_int = row["fp_intersection"]
+                actual = row["actual_sepsis"]
+                both = row["flagged_both"]
+                full_only = row["flagged_full_only"]
+                early_only = row["flagged_early_only"]
+                neither = row["flagged_neither"]
+                sens_int = row["sensitivity_intersection"]
+                prec_int = row["precision_intersection"]
+
+                st.markdown(
+                    f'<div class="metric-explanation">'
+                    f'• Of the <b>{both:,}</b> patients flagged by both models, '
+                    f'<b>{tp_int:,}</b> ({prec_int:.0%}) actually had sepsis '
+                    f'(<i>intersection precision</i>).<br>'
+                    f'• Of all <b>{actual:,}</b> actual sepsis patients, both models agree on '
+                    f'<b>{tp_int:,}</b> ({sens_int:.0%}) (<i>intersection sensitivity</i>) — '
+                    f'this is the cohort where the early-warning signal is strong enough to be '
+                    f'corroborated by the full-label model.<br>'
+                    f'• <b>{full_only:,}</b> patients are caught only by the full-label model '
+                    f'(likely already septic by the time they’re flagged); '
+                    f'<b>{early_only:,}</b> are caught only by the early-warning model; '
+                    f'<b>{neither:,}</b> are missed by both.'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Optional: 2x2 contingency by sepsis status
+                contingency_df = pd.DataFrame(
+                    {
+                        "Cohort": [
+                            "Flagged by both",
+                            "Flagged by Full only",
+                            "Flagged by Early only",
+                            "Flagged by neither",
+                        ],
+                        "Actual Sepsis": [tp_int, "—", "—", "—"],
+                        "Not Sepsis": [fp_int, "—", "—", "—"],
+                        "Total Patients": [both, full_only, early_only, neither],
+                    }
+                )
+                with st.expander("Patient cohort breakdown"):
+                    st.dataframe(contingency_df, use_container_width=True, hide_index=True)
+
     # ── ROC Curve ────────────────────────────────────────────────────
-    fpr = metrics.get("fpr", [])
-    tpr = metrics.get("tpr", [])
+    ew_perf = (metrics.get("label_variants") or {}).get("early_warning") or {}
+    fpr = ew_perf.get("fpr") or metrics.get("fpr", [])
+    tpr = ew_perf.get("tpr") or metrics.get("tpr", [])
+    headline_auroc = ew_perf.get("auroc") if ew_perf else metrics.get("cv_xgb_auroc", 0)
+    headline_label = "XGBoost (Early-Warning)" if ew_perf else "XGBoost"
 
     if fpr and tpr:
         st.markdown("### ROC Curve")
         fig = go.Figure()
 
-        xgb_auroc = metrics.get("cv_xgb_auroc", 0)
         fig.add_trace(go.Scatter(
             x=fpr, y=tpr, mode="lines",
-            name=f"XGBoost (AUROC = {xgb_auroc:.3f})",
+            name=f"{headline_label} (AUROC = {headline_auroc:.3f})",
             line=dict(color="#1f77b4", width=2.5),
         ))
 
@@ -435,6 +683,82 @@ def page_performance():
                 unsafe_allow_html=True,
             )
 
+    # ── Confusion Matrix: Early-Warning Variant ──────────────────────
+    perf_threshold = metrics.get("default_threshold", 0.30)
+    ew_cm = early_warning_confusion_matrix(perf_threshold)
+    if ew_cm:
+        st.markdown("### Early-Warning Variant — Confusion Matrix")
+        st.caption(
+            "Same lens as above, but computed from the early-warning model "
+            "(post-onset hours censored from training). Patient-level: a patient "
+            f"is flagged if their max hourly score ≥ {perf_threshold}."
+        )
+
+        ew_tp = ew_cm["tp"]
+        ew_fn = ew_cm["fn"]
+        ew_fp = ew_cm["fp"]
+        ew_tn = ew_cm["tn"]
+        ew_n_actual = ew_cm["actual_sepsis"]
+        ew_n_no_sepsis = ew_cm["actual_no_sepsis"]
+
+        fig_ew = go.Figure(data=go.Heatmap(
+            z=[[ew_tp, ew_fn], [ew_fp, ew_tn]],
+            x=["Predicted Sepsis", "Predicted No Sepsis"],
+            y=["Actually Had Sepsis", "Actually No Sepsis"],
+            text=[
+                [f"Caught: {ew_tp:,}", f"Missed: {ew_fn:,}"],
+                [f"False Alarm: {ew_fp:,}", f"Correct: {ew_tn:,}"],
+            ],
+            texttemplate="%{text}",
+            textfont=dict(size=16, color="white"),
+            colorscale=[[0, "#1a3a2a"], [0.5, "#8b4513"], [1, "#b22222"]],
+            showscale=False,
+        ))
+        fig_ew.update_layout(
+            title=f"Early-Warning Patient-Level Outcomes ({ew_cm['total_patients']:,} patients)",
+            height=320,
+            yaxis=dict(autorange="reversed"),
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+        st.plotly_chart(fig_ew, use_container_width=True)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(
+                f'<div class="metric-explanation">'
+                f'<b>Sepsis patients ({ew_n_actual:,}):</b><br>'
+                f'Caught: {ew_tp:,} | Missed: {ew_fn:,}</div>',
+                unsafe_allow_html=True,
+            )
+        with c2:
+            st.markdown(
+                f'<div class="metric-explanation">'
+                f'<b>Non-sepsis patients ({ew_n_no_sepsis:,}):</b><br>'
+                f'Correct: {ew_tn:,} | False alarm: {ew_fp:,}</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Quick delta vs full-label CM (if both are present)
+        if cm:
+            full_caught = cm["tp"]
+            full_missed = cm["fn"]
+            full_fa = cm["fp"]
+            d_caught = ew_tp - full_caught
+            d_missed = ew_fn - full_missed
+            d_fa = ew_fp - full_fa
+            sign = lambda v: "+" if v >= 0 else ""
+            st.markdown(
+                f'<div class="metric-explanation">'
+                f'<b>Δ vs full-label model:</b> '
+                f'Caught {sign(d_caught)}{d_caught:,} | '
+                f'Missed {sign(d_missed)}{d_missed:,} | '
+                f'False alarms {sign(d_fa)}{d_fa:,}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
     # ── Threshold Analysis ───────────────────────────────────────────
     threshold_data = metrics.get("threshold_analysis")
     if threshold_data:
@@ -452,7 +776,33 @@ def page_performance():
         display_cols = ["threshold", "patient_sensitivity", "patient_specificity",
                         "patient_precision", "total_flagged"]
         available = [c for c in display_cols if c in t_df.columns]
-        if available:
+
+        # Try to load the early-warning threshold table for a side-by-side merge.
+        ew_t_df = None
+        if "threshold" in t_df.columns:
+            ew_t_df = early_warning_threshold_table(tuple(t_df["threshold"].tolist()))
+
+        if ew_t_df is not None and available:
+            merged = t_df[available].merge(
+                ew_t_df, on="threshold", suffixes=("_full", "_ew"),
+            )
+            fmt_df = pd.DataFrame({
+                "Threshold": merged["threshold"],
+                "Sens (Full)": merged["patient_sensitivity_full"].map(lambda x: f"{x:.1%}"),
+                "Sens (EW)":   merged["patient_sensitivity_ew"].map(lambda x: f"{x:.1%}"),
+                "Spec (Full)": merged["patient_specificity_full"].map(lambda x: f"{x:.1%}"),
+                "Spec (EW)":   merged["patient_specificity_ew"].map(lambda x: f"{x:.1%}"),
+                "Prec (Full)": merged["patient_precision_full"].map(lambda x: f"{x:.1%}"),
+                "Prec (EW)":   merged["patient_precision_ew"].map(lambda x: f"{x:.1%}"),
+                "Flagged (Full)": merged["total_flagged_full"].map(lambda x: f"{int(x):,}"),
+                "Flagged (EW)":   merged["total_flagged_ew"].map(lambda x: f"{int(x):,}"),
+            })
+            st.caption(
+                "Side-by-side comparison at each threshold. **Full** = full-label model; "
+                "**EW** = early-warning variant (post-onset hours censored)."
+            )
+            st.dataframe(fmt_df, use_container_width=True, hide_index=True)
+        elif available:
             fmt_df = t_df[available].copy()
             for col in ["patient_sensitivity", "patient_specificity", "patient_precision"]:
                 if col in fmt_df.columns:

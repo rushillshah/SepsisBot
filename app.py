@@ -87,6 +87,14 @@ def load_woe_data() -> dict | None:
 
 
 @st.cache_data
+def load_leadup_csv(name: str) -> pd.DataFrame | None:
+    path = DATA_PROCESSED / "feature_analysis" / "leadup" / f"{name}.csv"
+    if not path.exists():
+        return None
+    return pd.read_csv(path, index_col=0)
+
+
+@st.cache_data
 def early_warning_threshold_table(thresholds: tuple) -> pd.DataFrame | None:
     """Patient-level threshold table for the early-warning variant.
 
@@ -156,7 +164,7 @@ def no_data_warning():
 
 # ── Navigation ───────────────────────────────────────────────────────────────
 
-PAGES = ["Overview", "Performance", "Feature Analysis", "Patient Explorer"]
+PAGES = ["Overview", "Performance", "Feature Analysis", "Leadup to Sepsis", "Patient Explorer"]
 
 st.sidebar.markdown("### Sepsis Early Warning PoC")
 st.sidebar.markdown("---")
@@ -1189,12 +1197,205 @@ def page_patient_explorer():
         st.info("No key lab values measured for this patient.")
 
 
+# ── Leadup to Sepsis Page ─────────────────────────────────────────────────────
+
+
+_LEADUP_BIN_LABELS = ["0-3h", "3-6h", "6-12h", "12-24h", "24-48h"]
+
+
+def _leadup_heatmap(df: pd.DataFrame, title: str, top_n: int = 30) -> go.Figure:
+    """Build a (feature × bin) heatmap from a per-lead-time importance frame.
+
+    Shows the top-N features ranked by their max score across bins.
+    """
+    bin_cols = [c for c in _LEADUP_BIN_LABELS if c in df.columns]
+    sub = df[bin_cols].copy()
+    sub["__rank"] = sub.max(axis=1)
+    sub = sub.sort_values("__rank", ascending=False).head(top_n).drop(columns="__rank")
+    # Reverse so highest-importance feature is on top of the heatmap
+    sub = sub.iloc[::-1]
+
+    fig = go.Figure(data=go.Heatmap(
+        z=sub.values,
+        x=sub.columns.tolist(),
+        y=sub.index.tolist(),
+        colorscale="Reds",
+        colorbar=dict(title="Score"),
+        hovertemplate="%{y}<br>%{x}<br>score=%{z:.4f}<extra></extra>",
+    ))
+    fig.update_layout(
+        title=title,
+        height=max(420, 22 * len(sub)),
+        xaxis_title="Hours before sepsis onset",
+        yaxis_title="",
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
+    return fig
+
+
+def _leading_vs_imminent_table(
+    df: pd.DataFrame, label: str, n: int = 15,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Rank features by (24-48h − 0-3h) score gap.
+
+    Returns (top_leading, top_imminent) — features that fire early vs late.
+    """
+    if "24-48h" not in df.columns or "0-3h" not in df.columns:
+        empty = pd.DataFrame(columns=["Feature", "24-48h", "0-3h", "Lead Δ"])
+        return empty, empty
+
+    sub = df.copy()
+    sub["lead_delta"] = sub["24-48h"] - sub["0-3h"]
+    sub = sub.sort_values("lead_delta", ascending=False)
+
+    top_leading = sub.head(n).reset_index().rename(columns={
+        "feature": "Feature", "lead_delta": "Lead Δ",
+    })
+    top_imminent = sub.tail(n).iloc[::-1].reset_index().rename(columns={
+        "feature": "Feature", "lead_delta": "Lead Δ",
+    })
+
+    cols = ["Feature", "24-48h", "12-24h", "6-12h", "3-6h", "0-3h", "Lead Δ"]
+    cols = [c for c in cols if c in top_leading.columns]
+    return top_leading[cols], top_imminent[cols]
+
+
+def _per_bin_top_bars(iv_df: pd.DataFrame, shap_df: pd.DataFrame, bin_label: str, n: int = 15) -> go.Figure:
+    """Side-by-side IV and SHAP top-n features for a single lead-time bin."""
+    iv_top = iv_df[bin_label].nlargest(n) if iv_df is not None and bin_label in iv_df.columns else pd.Series(dtype=float)
+    shap_top = shap_df[bin_label].nlargest(n) if shap_df is not None and bin_label in shap_df.columns else pd.Series(dtype=float)
+
+    fig = make_subplots(rows=1, cols=2, subplot_titles=("IV (data signal)", "SHAP (model usage)"))
+
+    if not iv_top.empty:
+        fig.add_trace(
+            go.Bar(
+                x=iv_top.values[::-1],
+                y=iv_top.index.tolist()[::-1],
+                orientation="h",
+                marker_color="#1f77b4",
+                name="IV",
+                showlegend=False,
+            ),
+            row=1, col=1,
+        )
+
+    if not shap_top.empty:
+        fig.add_trace(
+            go.Bar(
+                x=shap_top.values[::-1],
+                y=shap_top.index.tolist()[::-1],
+                orientation="h",
+                marker_color="#d62728",
+                name="SHAP",
+                showlegend=False,
+            ),
+            row=1, col=2,
+        )
+
+    fig.update_layout(
+        height=max(420, 26 * n),
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        title=f"Lead time: {bin_label}",
+    )
+    return fig
+
+
+def page_leadup_analysis():
+    st.markdown("## Leadup to Sepsis")
+    st.markdown(
+        '<div class="metric-explanation">'
+        'Which indicators light up <b>early</b> in the leadup to sepsis vs only at the moment of onset? '
+        'For each feature, we measure its predictive strength (Information Value) and the model\'s reliance on it (mean |SHAP|) '
+        'separately within each lead-time bin. Features with stronger signal far from onset are <b>leading indicators</b> — '
+        'they\'re the ones a clinician could act on hours before the patient crashes.</div>',
+        unsafe_allow_html=True,
+    )
+
+    iv_df = load_leadup_csv("iv_by_lead_time")
+    shap_df = load_leadup_csv("shap_by_lead_time")
+
+    if iv_df is None and shap_df is None:
+        st.warning(
+            "No leadup analysis artifacts found. Re-run the pipeline "
+            "(`python run_pipeline.py`) to generate `data/processed/feature_analysis/leadup/`."
+        )
+        return
+
+    if iv_df is None:
+        st.info("IV-by-leadtime not available — run the full pipeline to populate it.")
+    if shap_df is None:
+        st.info("SHAP-by-leadtime not available — likely a SHAP install issue. IV view still works.")
+
+    # ── Heatmaps ─────────────────────────────────────────────────────────
+    st.markdown("### Importance Heatmap")
+    st.markdown(
+        '<div class="metric-explanation">'
+        'Top 30 features ranked by their peak score across any lead-time bin. '
+        'Darker red = stronger signal in that lead-time window.</div>',
+        unsafe_allow_html=True,
+    )
+    cols = st.columns(2)
+    if iv_df is not None:
+        cols[0].plotly_chart(
+            _leadup_heatmap(iv_df, "IV (data signal)"), use_container_width=True,
+        )
+    if shap_df is not None:
+        cols[1].plotly_chart(
+            _leadup_heatmap(shap_df, "SHAP (model usage)"), use_container_width=True,
+        )
+
+    # ── Leading vs imminent table ────────────────────────────────────────
+    st.markdown("### Leading vs Imminent Indicators")
+    st.markdown(
+        '<div class="metric-explanation">'
+        'Sorted by <b>(score at 24-48h) − (score at 0-3h)</b>. Positive = leading indicator '
+        '(fires far from onset, useful for early action). Negative = imminent indicator '
+        '(only fires near onset, useful for confirmation but not for early intervention). '
+        'Showing IV-based ranking — switch to SHAP below.</div>',
+        unsafe_allow_html=True,
+    )
+
+    metric_choice = st.radio(
+        "Rank by", ["IV", "SHAP"], horizontal=True, key="leadup_lead_metric",
+    )
+    source = iv_df if metric_choice == "IV" else shap_df
+    if source is None:
+        st.info(f"{metric_choice} data not available.")
+    else:
+        leading, imminent = _leading_vs_imminent_table(source, metric_choice, n=15)
+        l_col, r_col = st.columns(2)
+        l_col.markdown("**Top leading indicators (early signal)**")
+        l_col.dataframe(leading.style.format(precision=4), use_container_width=True, hide_index=True)
+        r_col.markdown("**Top imminent indicators (late signal)**")
+        r_col.dataframe(imminent.style.format(precision=4), use_container_width=True, hide_index=True)
+
+    # ── Per-bin top features ─────────────────────────────────────────────
+    st.markdown("### Top Features Per Lead-Time Bin")
+    st.markdown(
+        '<div class="metric-explanation">'
+        'For each lead-time window, the 15 most important features by IV (blue, data signal) '
+        'and SHAP (red, model reliance).</div>',
+        unsafe_allow_html=True,
+    )
+    selected_bin = st.selectbox("Lead-time bin", _LEADUP_BIN_LABELS, key="leadup_bin_select")
+    st.plotly_chart(
+        _per_bin_top_bars(iv_df, shap_df, selected_bin, n=15),
+        use_container_width=True,
+    )
+
+
 # ── Router ───────────────────────────────────────────────────────────────────
 
 PAGE_DISPATCH = {
     "Overview": page_overview,
     "Performance": page_performance,
     "Feature Analysis": page_feature_analysis,
+    "Leadup to Sepsis": page_leadup_analysis,
     "Patient Explorer": page_patient_explorer,
 }
 

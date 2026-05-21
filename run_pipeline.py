@@ -291,6 +291,19 @@ def run() -> None:
         json.dump(dashboard_json, f, indent=2)
     print(f"  Saved metrics to {metrics_path}")
 
+    # Per-lead-time feature importance (IV + SHAP per bin)
+    print("  Computing per-lead-time feature importance ...")
+    from src.leadup_analysis import run_leadup_analysis
+    run_leadup_analysis(
+        X=X_all,
+        y_early=y_early,
+        eval_labels=eval_labels,
+        patient_ids=patient_ids,
+        iculos=iculos,
+        output_dir=DATA_PROCESSED / "feature_analysis" / "leadup",
+        best_params=best_params,
+    )
+
     _print_summary(cv_results)
 
 

@@ -407,6 +407,30 @@ class TestNormalRangeFeatures:
         p2 = result[result["patient_id"] == "p002"]
         assert (p2["Creatinine_above_normal"] == 1).all()
 
+    def test_drift_6h_worsening(self, imputed_df: pd.DataFrame) -> None:
+        """6h drift is positive when patient moves away from normal over 6h."""
+        df = imputed_df.copy()
+        # p001: HR ramps from midpoint (80) through to well above range (130)
+        # over hours 1..10 — abs_deviation grows monotonically, so the 6h
+        # backward diff at hour 7+ must be positive (worsening).
+        ramp = np.linspace(80.0, 130.0, 10)
+        df.loc[df["patient_id"] == "p001", "HR"] = ramp
+        result = add_normal_range_features(df)
+        p1 = result[result["patient_id"] == "p001"].sort_values("ICULOS")
+        drift_6h = p1["HR_drift_from_normal_6h"].values
+        # First 6 hours: no t-6 reference → fillna(0)
+        assert (drift_6h[:6] == 0.0).all()
+        # Hours 7..10: must be strictly positive (moving away from normal)
+        assert (drift_6h[6:] > 0).all()
+
+    def test_drift_6h_stable_patient(self, imputed_df: pd.DataFrame) -> None:
+        """Stable patient inside normal range has ~0 6h drift."""
+        df = imputed_df.copy()
+        df.loc[df["patient_id"] == "p001", "HR"] = 80.0  # midpoint, flat
+        result = add_normal_range_features(df)
+        p1 = result[result["patient_id"] == "p001"].sort_values("ICULOS")
+        assert (p1["HR_drift_from_normal_6h"].abs() < 1e-9).all()
+
     def test_no_mutation(self, imputed_df: pd.DataFrame) -> None:
         original_cols = list(imputed_df.columns)
         _ = add_normal_range_features(imputed_df)

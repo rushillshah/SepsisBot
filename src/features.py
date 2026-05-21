@@ -373,45 +373,70 @@ def add_normal_range_features(df: pd.DataFrame) -> pd.DataFrame:
       - {col}_below_normal  (binary): value below age/gender lower bound
       - {col}_deviation_from_normal (float): signed distance from range midpoint,
         normalized by half-range width (z-score-like: ±1.0 = at boundary)
+      - {col}_abs_deviation_from_normal (float): magnitude of abnormality
+        (|deviation_from_normal|). 0 when at midpoint of normal, grows as
+        the value moves away from normal in either direction.
+      - {col}_drift_from_normal (float): per-patient 1-hour change in
+        ``abs_deviation_from_normal``. POSITIVE = moving away from normal
+        (worsening); NEGATIVE = trending back toward normal (improving).
+      - {col}_drift_from_normal_6h (float): per-patient 6-hour change in
+        ``abs_deviation_from_normal`` (t minus t-6). Captures slower
+        trends — e.g. a lactate that fails to normalize over 6 hours.
+        Same sign convention as the 1h drift.
 
     Uses clinically established reference ranges from CLINICAL_NORMAL_RANGES.
-    No data leakage — only uses current-row value + static demographics.
+    No data leakage — only uses current-row value + static demographics, and
+    drift is a backward-looking diff within the same patient.
     """
-    result = df.copy()
-
     age_bin = pd.cut(
-        result["Age"],
+        df["Age"],
         bins=AGE_BINS,
         labels=AGE_BIN_LABELS,
         right=False,
     ).fillna("18-40")
 
-    gender = result["Gender"].fillna(1).astype(int)
+    gender = df["Gender"].fillna(1).astype(int)
+    pid = df["patient_id"]
+
+    new_cols: dict[str, np.ndarray | pd.Series] = {}
 
     for col in NORMAL_RANGE_COLS:
-        if col not in result.columns:
+        if col not in df.columns:
             continue
 
         ranges = CLINICAL_NORMAL_RANGES.get(col)
         if ranges is None:
             continue
 
-        # Build per-row (low, high) via vectorized lookup
         default = ranges.get(("18-40", 1), (0.0, 0.0))
         keys = list(zip(age_bin.astype(str), gender))
         low = np.array([ranges.get(k, default)[0] for k in keys], dtype=np.float64)
         high = np.array([ranges.get(k, default)[1] for k in keys], dtype=np.float64)
 
-        values = result[col].values.astype(np.float64)
+        values = df[col].values.astype(np.float64)
         midpoint = (low + high) / 2.0
         half_range = (high - low) / 2.0
-        half_range[half_range == 0] = 1.0  # guard against zero division
+        half_range[half_range == 0] = 1.0
 
-        result[f"{col}_above_normal"] = (values > high).astype(np.int8)
-        result[f"{col}_below_normal"] = (values < low).astype(np.int8)
-        result[f"{col}_deviation_from_normal"] = (values - midpoint) / half_range
+        deviation = (values - midpoint) / half_range
+        abs_deviation = np.abs(deviation)
 
-    return result
+        new_cols[f"{col}_above_normal"] = (values > high).astype(np.int8)
+        new_cols[f"{col}_below_normal"] = (values < low).astype(np.int8)
+        new_cols[f"{col}_deviation_from_normal"] = deviation
+        new_cols[f"{col}_abs_deviation_from_normal"] = abs_deviation
+
+        abs_dev_series = pd.Series(abs_deviation, index=df.index)
+        grouped = abs_dev_series.groupby(pid)
+        drift_1h = grouped.diff().fillna(0.0)
+        drift_6h = grouped.diff(periods=6).fillna(0.0)
+        new_cols[f"{col}_drift_from_normal"] = drift_1h.values
+        new_cols[f"{col}_drift_from_normal_6h"] = drift_6h.values
+
+    if not new_cols:
+        return df.copy()
+
+    return pd.concat([df, pd.DataFrame(new_cols, index=df.index)], axis=1)
 
 
 def create_early_label(df: pd.DataFrame, extra_hours: int = EARLY_LABEL_EXTRA_HOURS) -> pd.DataFrame:
@@ -475,7 +500,6 @@ def build_feature_matrix(
 
     enriched = add_clinical_scores(df)
     enriched = add_normal_range_features(enriched)
-    enriched = add_dynamic_baselines(enriched)
     enriched = add_rolling_features(enriched)
     enriched = add_trend_features(enriched)
 

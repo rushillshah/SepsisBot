@@ -1,0 +1,142 @@
+section,rank,name,category,iv,iv_strength,units,description
+raw_data_column,,HR,Vital,,,beats/min,Heart rate
+raw_data_column,,O2Sat,Vital,,,%,Pulse oximetry (peripheral oxygen saturation)
+raw_data_column,,Temp,Vital,,,deg C,Body temperature
+raw_data_column,,SBP,Vital,,,mm Hg,Systolic blood pressure
+raw_data_column,,MAP,Vital,,,mm Hg,Mean arterial pressure
+raw_data_column,,DBP,Vital,,,mm Hg,Diastolic blood pressure
+raw_data_column,,Resp,Vital,,,breaths/min,Respiration rate
+raw_data_column,,EtCO2,Vital,,,mm Hg,End-tidal carbon dioxide
+raw_data_column,,BaseExcess,Lab (blood gas),,,mmol/L,Excess bicarbonate; deviation of buffer base from normal
+raw_data_column,,HCO3,Lab (blood gas),,,mmol/L,Bicarbonate
+raw_data_column,,FiO2,Lab (blood gas),,,fraction,Fraction of inspired oxygen
+raw_data_column,,pH,Lab (blood gas),,,—,Arterial pH
+raw_data_column,,PaCO2,Lab (blood gas),,,mm Hg,Partial pressure of CO2 from arterial blood
+raw_data_column,,SaO2,Lab (blood gas),,,%,Oxygen saturation from arterial blood
+raw_data_column,,AST,Lab (chemistry),,,IU/L,Aspartate aminotransferase (liver enzyme)
+raw_data_column,,BUN,Lab (chemistry),,,mg/dL,Blood urea nitrogen (kidney function)
+raw_data_column,,Alkalinephos,Lab (chemistry),,,IU/L,Alkaline phosphatase
+raw_data_column,,Calcium,Lab (chemistry),,,mg/dL,Serum calcium
+raw_data_column,,Chloride,Lab (chemistry),,,mmol/L,Serum chloride
+raw_data_column,,Creatinine,Lab (chemistry),,,mg/dL,Serum creatinine (kidney function)
+raw_data_column,,Bilirubin_direct,Lab (chemistry),,,mg/dL,Direct (conjugated) bilirubin
+raw_data_column,,Glucose,Lab (chemistry),,,mg/dL,Serum glucose
+raw_data_column,,Lactate,Lab (chemistry),,,mmol/L,"Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker"
+raw_data_column,,Magnesium,Lab (chemistry),,,mmol/dL,Serum magnesium
+raw_data_column,,Phosphate,Lab (chemistry),,,mg/dL,Serum phosphate
+raw_data_column,,Potassium,Lab (chemistry),,,mmol/L,Serum potassium
+raw_data_column,,Bilirubin_total,Lab (chemistry),,,mg/dL,Total bilirubin
+raw_data_column,,TroponinI,Lab (cardiac),,,ng/mL,Troponin I (cardiac injury marker)
+raw_data_column,,Hct,Lab (CBC),,,%,Hematocrit
+raw_data_column,,Hgb,Lab (CBC),,,g/dL,Hemoglobin
+raw_data_column,,PTT,Lab (coag),,,seconds,Partial thromboplastin time (clotting)
+raw_data_column,,WBC,Lab (CBC),,,count*1000/uL,White blood cell count (immune response)
+raw_data_column,,Fibrinogen,Lab (coag),,,mg/dL,Fibrinogen
+raw_data_column,,Platelets,Lab (CBC),,,count*1000/uL,Platelet count
+raw_data_column,,Age,Demographic,,,years,Patient age (>=100 truncated to 100 in source)
+raw_data_column,,Gender,Demographic,,,0/1,"Female=0, Male=1"
+raw_data_column,,Unit1,Demographic,,,0/1,Admin ID for ICU unit (MICU). EXCLUDED from features (site confounder).
+raw_data_column,,Unit2,Demographic,,,0/1,Admin ID for ICU unit (SICU). EXCLUDED from features (site confounder).
+raw_data_column,,HospAdmTime,Demographic,,,hours,Hours between hospital admit and ICU admit. EXCLUDED (site confounder).
+raw_data_column,,ICULOS,Time,,,hours,ICU length-of-stay so far. EXCLUDED from features (circular/leaky).
+raw_data_column,,SepsisLabel,Outcome,,,0/1,Target. Flips to 1 starting 6h before Sepsis-3 clinical onset (t_sepsis - 6); 0 for non-sepsis patients.
+top_100_by_iv,1,FiO2_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.355073,Strong,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Fraction of inspired oxygen]
+top_100_by_iv,2,Lactate_baseline_dev_max_6h,Rolling 6h statistic (engineered),0.325725,Strong,,"6h rolling max of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]]"
+top_100_by_iv,3,pH_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.318280,Strong,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Arterial pH]
+top_100_by_iv,4,Lactate_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.318044,Strong,,"deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]"
+top_100_by_iv,5,FiO2,Raw,0.302218,Strong,,Fraction of inspired oxygen
+top_100_by_iv,6,Lactate_baseline_dev_avg_6h,Rolling 6h statistic (engineered),0.290621,Medium,,"6h rolling mean of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]]"
+top_100_by_iv,7,PaCO2_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.263352,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Partial pressure of CO2 from arterial blood]
+top_100_by_iv,8,Lactate_baseline_dev_min_6h,Rolling 6h statistic (engineered),0.254082,Medium,,"6h rolling min of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]]"
+top_100_by_iv,9,early_warning_score_avg_6h,Rolling 6h statistic (engineered),0.230944,Medium,,"6h rolling mean of [MEWS (Modified Early Warning Score). Project-engineered, NOT in PhysioNet raw data. Sum of 4 components: HR (0-3), SBP (0-3), Resp (0-3), Temp (0 or 2). Higher = more deteriorated. Standard ward-vitals deterioration score; range ~0-11.]"
+top_100_by_iv,10,early_warning_score_max_6h,Rolling 6h statistic (engineered),0.212468,Medium,,"6h rolling max of [MEWS (Modified Early Warning Score). Project-engineered, NOT in PhysioNet raw data. Sum of 4 components: HR (0-3), SBP (0-3), Resp (0-3), Temp (0 or 2). Higher = more deteriorated. Standard ward-vitals deterioration score; range ~0-11.]"
+top_100_by_iv,11,pH,Raw,0.205022,Medium,,Arterial pH
+top_100_by_iv,12,early_warning_score,Clinical score (engineered),0.191500,Medium,,"MEWS (Modified Early Warning Score). Project-engineered, NOT in PhysioNet raw data. Sum of 4 components: HR (0-3), SBP (0-3), Resp (0-3), Temp (0 or 2). Higher = more deteriorated. Standard ward-vitals deterioration score; range ~0-11."
+top_100_by_iv,13,Temp_max_6h,Rolling 6h statistic (engineered),0.190158,Medium,,6h rolling max of [Body temperature]
+top_100_by_iv,14,FiO2_hours_since,Time-since-measurement (engineered),0.184969,Medium,,hours since last measurement of this variable (-1 before first draw) of [Fraction of inspired oxygen]
+top_100_by_iv,15,BaseExcess_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.182522,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Excess bicarbonate; deviation of buffer base from normal]
+top_100_by_iv,16,Temp,Raw,0.179939,Medium,,Body temperature
+top_100_by_iv,17,PaCO2_hours_since,Time-since-measurement (engineered),0.179803,Medium,,hours since last measurement of this variable (-1 before first draw) of [Partial pressure of CO2 from arterial blood]
+top_100_by_iv,18,inflammation_score_avg_6h,Rolling 6h statistic (engineered),0.177110,Medium,,6h rolling mean of [SIRS criteria count (0-4). Project-engineered. Sums 4 binary flags: Temp >38 or <36C; HR>90; Resp>20; WBC>12 or <4.]
+top_100_by_iv,19,PaCO2,Raw,0.171204,Medium,,Partial pressure of CO2 from arterial blood
+top_100_by_iv,20,lactate_bp_ratio_std_6h,Rolling 6h statistic (engineered),0.170307,Medium,,6h rolling stdev of [Lactate / MAP. Project-engineered. High lactate with low MAP indicates shock.]
+top_100_by_iv,21,inflammation_score,Clinical score (engineered),0.169387,Medium,,SIRS criteria count (0-4). Project-engineered. Sums 4 binary flags: Temp >38 or <36C; HR>90; Resp>20; WBC>12 or <4.
+top_100_by_iv,22,inflammation_score_max_6h,Rolling 6h statistic (engineered),0.162602,Medium,,6h rolling max of [SIRS criteria count (0-4). Project-engineered. Sums 4 binary flags: Temp >38 or <36C; HR>90; Resp>20; WBC>12 or <4.]
+top_100_by_iv,23,AST,Raw,0.161597,Medium,,Aspartate aminotransferase (liver enzyme)
+top_100_by_iv,24,Temp_avg_6h,Rolling 6h statistic (engineered),0.161451,Medium,,6h rolling mean of [Body temperature]
+top_100_by_iv,25,Temp_baseline_dev_max_6h,Rolling 6h statistic (engineered),0.160601,Medium,,6h rolling max of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Body temperature]]
+top_100_by_iv,26,Temp_deviation_from_normal,Distance from normal range (engineered),0.159081,Medium,,signed distance from age/gender-stratified clinical normal-range midpoint of [Body temperature]
+top_100_by_iv,27,pH_hours_since,Time-since-measurement (engineered),0.158907,Medium,,hours since last measurement of this variable (-1 before first draw) of [Arterial pH]
+top_100_by_iv,28,AST_hours_since,Time-since-measurement (engineered),0.158152,Medium,,hours since last measurement of this variable (-1 before first draw) of [Aspartate aminotransferase (liver enzyme)]
+top_100_by_iv,29,Alkalinephos_hours_since,Time-since-measurement (engineered),0.158104,Medium,,hours since last measurement of this variable (-1 before first draw) of [Alkaline phosphatase]
+top_100_by_iv,30,SaO2_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.157224,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Oxygen saturation from arterial blood]
+top_100_by_iv,31,Bilirubin_total_hours_since,Time-since-measurement (engineered),0.156754,Medium,,hours since last measurement of this variable (-1 before first draw) of [Total bilirubin]
+top_100_by_iv,32,early_warning_score_min_6h,Rolling 6h statistic (engineered),0.153226,Medium,,"6h rolling min of [MEWS (Modified Early Warning Score). Project-engineered, NOT in PhysioNet raw data. Sum of 4 components: HR (0-3), SBP (0-3), Resp (0-3), Temp (0 or 2). Higher = more deteriorated. Standard ward-vitals deterioration score; range ~0-11.]"
+top_100_by_iv,33,Bilirubin_total_deviation_from_normal,Distance from normal range (engineered),0.149965,Medium,,signed distance from age/gender-stratified clinical normal-range midpoint of [Total bilirubin]
+top_100_by_iv,34,Resp_avg_6h,Rolling 6h statistic (engineered),0.149402,Medium,,6h rolling mean of [Respiration rate]
+top_100_by_iv,35,Alkalinephos,Raw,0.148853,Medium,,Alkaline phosphatase
+top_100_by_iv,36,Alkalinephos_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.147514,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Alkaline phosphatase]
+top_100_by_iv,37,Bilirubin_total,Raw,0.146934,Medium,,Total bilirubin
+top_100_by_iv,38,Lactate_hours_since,Time-since-measurement (engineered),0.144902,Medium,,"hours since last measurement of this variable (-1 before first draw) of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]"
+top_100_by_iv,39,Phosphate_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.144189,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Serum phosphate]
+top_100_by_iv,40,Bilirubin_total_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.142696,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Total bilirubin]
+top_100_by_iv,41,BaseExcess,Raw,0.141060,Medium,,Excess bicarbonate; deviation of buffer base from normal
+top_100_by_iv,42,AST_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.139551,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Aspartate aminotransferase (liver enzyme)]
+top_100_by_iv,43,Temp_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.137983,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Body temperature]
+top_100_by_iv,44,PTT_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.127649,Medium,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Partial thromboplastin time (clotting)]
+top_100_by_iv,45,BUN_deviation_from_normal,Distance from normal range (engineered),0.125599,Medium,,signed distance from age/gender-stratified clinical normal-range midpoint of [Blood urea nitrogen (kidney function)]
+top_100_by_iv,46,Resp_min_6h,Rolling 6h statistic (engineered),0.125252,Medium,,6h rolling min of [Respiration rate]
+top_100_by_iv,47,Resp_max_6h,Rolling 6h statistic (engineered),0.125199,Medium,,6h rolling max of [Respiration rate]
+top_100_by_iv,48,sepsis_screen_score_avg_6h,Rolling 6h statistic (engineered),0.124720,Medium,,6h rolling mean of [Modified qSOFA (0-2). Project-engineered. Sums Resp>=22 and SBP<=100. (GCS component omitted — not in dataset.)]
+top_100_by_iv,49,Temp_baseline_dev_avg_6h,Rolling 6h statistic (engineered),0.123894,Medium,,6h rolling mean of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Body temperature]]
+top_100_by_iv,50,HR_max_6h,Rolling 6h statistic (engineered),0.123063,Medium,,6h rolling max of [Heart rate]
+top_100_by_iv,51,lactate_bp_ratio_max_6h,Rolling 6h statistic (engineered),0.123051,Medium,,6h rolling max of [Lactate / MAP. Project-engineered. High lactate with low MAP indicates shock.]
+top_100_by_iv,52,lactate_bp_ratio_min_6h,Rolling 6h statistic (engineered),0.122376,Medium,,6h rolling min of [Lactate / MAP. Project-engineered. High lactate with low MAP indicates shock.]
+top_100_by_iv,53,Lactate_deviation_from_normal,Distance from normal range (engineered),0.121716,Medium,,"signed distance from age/gender-stratified clinical normal-range midpoint of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]"
+top_100_by_iv,54,Lactate,Raw,0.121716,Medium,,"Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker"
+top_100_by_iv,55,Temp_min_6h,Rolling 6h statistic (engineered),0.121064,Medium,,6h rolling min of [Body temperature]
+top_100_by_iv,56,PTT_hours_since,Time-since-measurement (engineered),0.120700,Medium,,hours since last measurement of this variable (-1 before first draw) of [Partial thromboplastin time (clotting)]
+top_100_by_iv,57,lactate_bp_ratio_avg_6h,Rolling 6h statistic (engineered),0.119373,Medium,,6h rolling mean of [Lactate / MAP. Project-engineered. High lactate with low MAP indicates shock.]
+top_100_by_iv,58,BUN,Raw,0.119307,Medium,,Blood urea nitrogen (kidney function)
+top_100_by_iv,59,lactate_bp_ratio,Clinical score (engineered),0.118101,Medium,,Lactate / MAP. Project-engineered. High lactate with low MAP indicates shock.
+top_100_by_iv,60,Resp,Raw,0.116845,Medium,,Respiration rate
+top_100_by_iv,61,inflammation_score_min_6h,Rolling 6h statistic (engineered),0.115160,Medium,,6h rolling min of [SIRS criteria count (0-4). Project-engineered. Sums 4 binary flags: Temp >38 or <36C; HR>90; Resp>20; WBC>12 or <4.]
+top_100_by_iv,62,HR_avg_6h,Rolling 6h statistic (engineered),0.114213,Medium,,6h rolling mean of [Heart rate]
+top_100_by_iv,63,HR,Raw,0.113903,Medium,,Heart rate
+top_100_by_iv,64,HR_deviation_from_normal,Distance from normal range (engineered),0.113903,Medium,,signed distance from age/gender-stratified clinical normal-range midpoint of [Heart rate]
+top_100_by_iv,65,Resp_deviation_from_normal,Distance from normal range (engineered),0.112622,Medium,,signed distance from age/gender-stratified clinical normal-range midpoint of [Respiration rate]
+top_100_by_iv,66,Lactate_max_6h,Rolling 6h statistic (engineered),0.111677,Medium,,"6h rolling max of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]"
+top_100_by_iv,67,Lactate_avg_6h,Rolling 6h statistic (engineered),0.111552,Medium,,"6h rolling mean of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]"
+top_100_by_iv,68,Lactate_min_6h,Rolling 6h statistic (engineered),0.111037,Medium,,"6h rolling min of [Lactic acid; tissue hypoperfusion marker, classic sepsis biomarker]"
+top_100_by_iv,69,SaO2,Raw,0.109281,Medium,,Oxygen saturation from arterial blood
+top_100_by_iv,70,PTT,Raw,0.104191,Medium,,Partial thromboplastin time (clotting)
+top_100_by_iv,71,SaO2_hours_since,Time-since-measurement (engineered),0.101048,Medium,,hours since last measurement of this variable (-1 before first draw) of [Oxygen saturation from arterial blood]
+top_100_by_iv,72,Resp_baseline_dev_avg_6h,Rolling 6h statistic (engineered),0.099043,Weak,,6h rolling mean of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Respiration rate]]
+top_100_by_iv,73,Temp_baseline_dev_min_6h,Rolling 6h statistic (engineered),0.097428,Weak,,6h rolling min of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Body temperature]]
+top_100_by_iv,74,Phosphate_hours_since,Time-since-measurement (engineered),0.095791,Weak,,hours since last measurement of this variable (-1 before first draw) of [Serum phosphate]
+top_100_by_iv,75,Creatinine_baseline_dev_min_6h,Rolling 6h statistic (engineered),0.094558,Weak,,6h rolling min of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Serum creatinine (kidney function)]]
+top_100_by_iv,76,BaseExcess_hours_since,Time-since-measurement (engineered),0.094439,Weak,,hours since last measurement of this variable (-1 before first draw) of [Excess bicarbonate; deviation of buffer base from normal]
+top_100_by_iv,77,BUN_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.094201,Weak,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Blood urea nitrogen (kidney function)]
+top_100_by_iv,78,HR_baseline_dev_avg_6h,Rolling 6h statistic (engineered),0.094025,Weak,,6h rolling mean of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Heart rate]]
+top_100_by_iv,79,WBC_avg_6h,Rolling 6h statistic (engineered),0.089950,Weak,,6h rolling mean of [White blood cell count (immune response)]
+top_100_by_iv,80,WBC_deviation_from_normal,Distance from normal range (engineered),0.089830,Weak,,signed distance from age/gender-stratified clinical normal-range midpoint of [White blood cell count (immune response)]
+top_100_by_iv,81,HR_baseline_dev_max_6h,Rolling 6h statistic (engineered),0.089197,Weak,,6h rolling max of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Heart rate]]
+top_100_by_iv,82,shock_index_max_6h,Rolling 6h statistic (engineered),0.089076,Weak,,6h rolling max of [HR / SBP. Project-engineered. Elevated values suggest hemodynamic instability.]
+top_100_by_iv,83,Resp_baseline_dev_min_6h,Rolling 6h statistic (engineered),0.088675,Weak,,6h rolling min of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Respiration rate]]
+top_100_by_iv,84,Phosphate,Raw,0.088545,Weak,,Serum phosphate
+top_100_by_iv,85,HR_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.088523,Weak,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Heart rate]
+top_100_by_iv,86,HR_baseline_dev_min_6h,Rolling 6h statistic (engineered),0.087820,Weak,,6h rolling min of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Heart rate]]
+top_100_by_iv,87,Creatinine_deviation_from_normal,Distance from normal range (engineered),0.087272,Weak,,signed distance from age/gender-stratified clinical normal-range midpoint of [Serum creatinine (kidney function)]
+top_100_by_iv,88,WBC_max_6h,Rolling 6h statistic (engineered),0.087187,Weak,,6h rolling max of [White blood cell count (immune response)]
+top_100_by_iv,89,shock_index,Clinical score (engineered),0.086830,Weak,,HR / SBP. Project-engineered. Elevated values suggest hemodynamic instability.
+top_100_by_iv,90,WBC,Raw,0.086776,Weak,,White blood cell count (immune response)
+top_100_by_iv,91,HR_min_6h,Rolling 6h statistic (engineered),0.084669,Weak,,6h rolling min of [Heart rate]
+top_100_by_iv,92,shock_index_avg_6h,Rolling 6h statistic (engineered),0.083541,Weak,,6h rolling mean of [HR / SBP. Project-engineered. Elevated values suggest hemodynamic instability.]
+top_100_by_iv,93,Calcium,Raw,0.080894,Weak,,Serum calcium
+top_100_by_iv,94,HCO3_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.080552,Weak,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Bicarbonate]
+top_100_by_iv,95,Creatinine_baseline_dev_avg_6h,Rolling 6h statistic (engineered),0.080041,Weak,,6h rolling mean of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Serum creatinine (kidney function)]]
+top_100_by_iv,96,Magnesium_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.079349,Weak,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Serum magnesium]
+top_100_by_iv,97,Resp_baseline_dev_max_6h,Rolling 6h statistic (engineered),0.079296,Weak,,6h rolling max of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [Respiration rate]]
+top_100_by_iv,98,Magnesium,Raw,0.078202,Weak,,Serum magnesium
+top_100_by_iv,99,WBC_baseline_dev_min_6h,Rolling 6h statistic (engineered),0.077644,Weak,,6h rolling min of [deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [White blood cell count (immune response)]]
+top_100_by_iv,100,WBC_baseline_dev,"Dynamic baseline deviation (engineered, causal CUSUM)",0.077480,Weak,,deviation from causal CUSUM dynamic baseline (real-time changepoint detection over the patient's history so far) of [White blood cell count (immune response)]

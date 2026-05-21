@@ -5,15 +5,10 @@ XGBoost gain-based importance, and SHAP values — plus a combined
 ranking that merges all three into a single prioritized list.
 """
 
-import matplotlib
-matplotlib.use("Agg")
-
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import shap
 
 
 # ── Information Value ────────────────────────────────────────────────────────
@@ -245,6 +240,11 @@ def compute_shap_values(
     pd.DataFrame
         Columns: feature, mean_abs_shap.  Sorted descending.
     """
+    import matplotlib  # heavy imports — only needed by this function
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import shap
+
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_sample)
 

@@ -298,6 +298,38 @@ LEADUP_BIN_LABELS = ["0-3h", "3-6h", "6-12h", "12-24h", "24-48h"]
 LEADUP_NEVER_LABEL = "never"  # never-sepsis rows (used as IV negatives)
 LEADUP_OUT_OF_RANGE_LABEL = "out_of_range"  # >=48h before onset
 
+# ── Leading-Indicator Feature Filter ─────────────────────────────────────────
+# Symptom / static-cohort-marker / clinician-action features carry signal that
+# separates "already-sick" patients but provide no genuine lead time (they are
+# flat-but-elevated 48h before onset, or encode that the team already suspected
+# sepsis). The filter below keeps only TRAJECTORY signals: vital trends, drift
+# from baseline, rate-of-change, and vital-derived deterioration scores.
+#
+# Evidence: onset-aligned trajectory analysis — 23/34 raw features are static
+# cohort markers, only Resp/Alkalinephos genuinely ramp. Ablating the static
+# block wholesale drops AUROC ~0.05 (the inflated, non-leading portion).
+
+USE_LEADING_INDICATORS_ONLY = True
+
+# Lab-level encodings that represent the *absolute level* of a reactively-drawn
+# lab → static cohort marker. Dropped (their drift/change versions are kept).
+LEADING_DROP_LAB_LEVEL_SUFFIXES = [
+    "_avg_6h", "_min_6h", "_max_6h", "_std_6h",
+    "_above_normal", "_below_normal",
+    "_deviation_from_normal", "_abs_deviation_from_normal",
+]
+# Trajectory encodings kept for every signal (the genuine leading indicators).
+LEADING_KEEP_TRAJ_SUFFIXES = ["_drift_from_normal", "_drift_from_normal_6h", "_hourly_change"]
+# Clinician-action leakage (testing frequency / missingness) — dropped for all.
+LEADING_DROP_LEAKAGE_SUFFIXES = ["_measured", "_hours_since"]
+# Feature families dropped entirely (intervention-driven or direct symptom).
+LEADING_DROP_FEATURE_PREFIXES = [
+    "FiO2",                  # intervention-driven (supplemental O2 decision)
+    "lactate_bp_ratio",      # symptom composite (hyperlactatemia + hypotension = shock)
+    "inflammation_score",    # screening score for the septic STATE
+    "sepsis_screen_score",   # screening score for the septic STATE
+]
+
 # ── Alert Aggregation ─────────────────────────────────────────────────────────
 
 MIN_CONSECUTIVE_HOURS = 3  # Require N sustained hours above threshold to flag a patient

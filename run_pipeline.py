@@ -117,6 +117,20 @@ def run() -> None:
 
     print("  Building feature matrix (once for entire pipeline) ...")
     X_all, y_early = build_feature_matrix(imputed_df, use_early_label=True)
+
+    # ── Leading-indicator filter ──────────────────────────────────────────
+    # Drop symptom / static-cohort-marker / clinician-action features that
+    # separate already-sick patients without giving genuine lead time.
+    from src.config import USE_LEADING_INDICATORS_ONLY
+    if USE_LEADING_INDICATORS_ONLY:
+        from src.features import select_leading_indicators
+        keep, drop_reasons = select_leading_indicators(list(X_all.columns))
+        import pandas as _pd
+        reason_counts = _pd.Series(drop_reasons).value_counts().to_dict()
+        print(f"  Leading-indicator filter: keep {len(keep)}, "
+              f"drop {len(drop_reasons)} — {reason_counts}")
+        X_all = X_all[keep]
+
     feature_names = list(X_all.columns)
     patient_ids = imputed_df["patient_id"].to_numpy()
     eval_labels = imputed_df["SepsisLabel"].to_numpy()

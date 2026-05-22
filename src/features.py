@@ -457,6 +457,59 @@ def create_early_label(df: pd.DataFrame, extra_hours: int = EARLY_LABEL_EXTRA_HO
     return result
 
 
+def select_leading_indicators(
+    columns: list[str],
+) -> tuple[list[str], dict[str, str]]:
+    """Partition feature columns into leading indicators vs. drop-list.
+
+    Drops symptom / static-cohort-marker / clinician-action features that
+    separate "already-sick" patients without providing genuine lead time,
+    keeping only trajectory signals (vital trends, drift-from-baseline,
+    rate-of-change, vital-derived deterioration scores).
+
+    Returns
+    -------
+    tuple[list[str], dict[str, str]]
+        ``(keep, drop_reasons)`` where ``keep`` is the retained column list
+        and ``drop_reasons`` maps each dropped column to its rationale tag.
+    """
+    from src.config import (
+        LEADING_DROP_FEATURE_PREFIXES,
+        LEADING_DROP_LAB_LEVEL_SUFFIXES,
+        LEADING_DROP_LEAKAGE_SUFFIXES,
+        LEADING_KEEP_TRAJ_SUFFIXES,
+    )
+
+    labs = set(LAB_COLS)
+    all_suffixes = sorted(
+        LEADING_DROP_LAB_LEVEL_SUFFIXES
+        + LEADING_KEEP_TRAJ_SUFFIXES
+        + LEADING_DROP_LEAKAGE_SUFFIXES,
+        key=len,
+        reverse=True,
+    )
+
+    def split_base(col: str) -> tuple[str, str]:
+        for suf in all_suffixes:
+            if col.endswith(suf):
+                return col[: -len(suf)], suf
+        return col, ""
+
+    keep: list[str] = []
+    drop_reasons: dict[str, str] = {}
+    for col in columns:
+        base, suffix = split_base(col)
+        if suffix in LEADING_DROP_LEAKAGE_SUFFIXES:
+            drop_reasons[col] = "leakage:testing-frequency"
+        elif any(col == p or col.startswith(p) for p in LEADING_DROP_FEATURE_PREFIXES):
+            drop_reasons[col] = "symptom/intervention"
+        elif base in labs and (suffix in LEADING_DROP_LAB_LEVEL_SUFFIXES or suffix == ""):
+            drop_reasons[col] = "static-cohort-marker"
+        else:
+            keep.append(col)
+    return keep, drop_reasons
+
+
 def build_feature_matrix(
     df: pd.DataFrame,
     use_early_label: bool = False,

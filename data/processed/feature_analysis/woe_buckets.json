@@ -1,1058 +1,1434 @@
 {
-  "FiO2_abs_deviation_from_normal": [
+  "early_warning_score_avg_6h": [
     {
-      "bucket": "(0.11, 3.222]",
-      "count": 335062,
-      "events": 12679,
-      "event_rate": 0.0378,
-      "woe": 0.5306,
-      "iv_contribution": 0.0797
+      "bucket": "(-0.001, 0.667]",
+      "count": 216265,
+      "events": 3802,
+      "event_rate": 0.0176,
+      "woe": -0.4431,
+      "iv_contribution": 0.0224
     },
     {
-      "bucket": "(3.222, 5.444]",
-      "count": 203168,
-      "events": 7273,
-      "event_rate": 0.0358,
-      "woe": 0.473,
-      "iv_contribution": 0.0373
+      "bucket": "(0.667, 1.0]",
+      "count": 349928,
+      "events": 5822,
+      "event_rate": 0.0166,
+      "woe": -0.4992,
+      "iv_contribution": 0.045
     },
     {
-      "bucket": "(5.444, 5.667]",
-      "count": 866393,
-      "events": 8567,
-      "event_rate": 0.0099,
-      "woe": -0.8401,
-      "iv_contribution": 0.2728
+      "bucket": "(1.0, 1.167]",
+      "count": 116104,
+      "events": 2065,
+      "event_rate": 0.0178,
+      "woe": -0.4311,
+      "iv_contribution": 0.0115
     },
     {
-      "bucket": "(5.667, 88883.222]",
-      "count": 131629,
-      "events": 6219,
-      "event_rate": 0.0472,
-      "woe": 0.7624,
-      "iv_contribution": 0.0728
+      "bucket": "(1.167, 1.333]",
+      "count": 120882,
+      "events": 2344,
+      "event_rate": 0.0194,
+      "woe": -0.3431,
+      "iv_contribution": 0.0079
+    },
+    {
+      "bucket": "(1.333, 1.667]",
+      "count": 202425,
+      "events": 4660,
+      "event_rate": 0.023,
+      "woe": -0.1679,
+      "iv_contribution": 0.0034
+    },
+    {
+      "bucket": "(1.667, 1.833]",
+      "count": 83418,
+      "events": 2322,
+      "event_rate": 0.0278,
+      "woe": 0.0271,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(1.833, 2.167]",
+      "count": 149869,
+      "events": 5159,
+      "event_rate": 0.0344,
+      "woe": 0.2462,
+      "iv_contribution": 0.0066
+    },
+    {
+      "bucket": "(2.167, 3.0]",
+      "count": 179410,
+      "events": 7700,
+      "event_rate": 0.0429,
+      "woe": 0.4755,
+      "iv_contribution": 0.0331
+    },
+    {
+      "bucket": "(3.0, 10.0]",
+      "count": 125062,
+      "events": 7975,
+      "event_rate": 0.0638,
+      "woe": 0.8935,
+      "iv_contribution": 0.1006
     }
   ],
-  "FiO2_deviation_from_normal": [
+  "early_warning_score_max_6h": [
     {
-      "bucket": "(-1116.779, -5.667]",
-      "count": 866438,
-      "events": 8575,
-      "event_rate": 0.0099,
-      "woe": -0.8392,
-      "iv_contribution": 0.2723
+      "bucket": "(-0.001, 1.0]",
+      "count": 439957,
+      "events": 7311,
+      "event_rate": 0.0166,
+      "woe": -0.5004,
+      "iv_contribution": 0.0568
     },
     {
-      "bucket": "(-5.667, 1.0]",
-      "count": 62216,
-      "events": 2128,
-      "event_rate": 0.0342,
-      "woe": 0.4259,
-      "iv_contribution": 0.0091
+      "bucket": "(1.0, 2.0]",
+      "count": 536401,
+      "events": 11187,
+      "event_rate": 0.0209,
+      "woe": -0.2689,
+      "iv_contribution": 0.0222
     },
     {
-      "bucket": "(1.0, 3.222]",
-      "count": 275969,
-      "events": 10569,
-      "event_rate": 0.0383,
-      "woe": 0.5431,
-      "iv_contribution": 0.0692
+      "bucket": "(2.0, 3.0]",
+      "count": 313857,
+      "events": 9757,
+      "event_rate": 0.0311,
+      "woe": 0.1408,
+      "iv_contribution": 0.0043
     },
     {
-      "bucket": "(3.222, 5.444]",
-      "count": 200045,
-      "events": 7255,
-      "event_rate": 0.0363,
-      "woe": 0.4865,
-      "iv_contribution": 0.0391
+      "bucket": "(3.0, 4.0]",
+      "count": 152786,
+      "events": 6828,
+      "event_rate": 0.0447,
+      "woe": 0.5179,
+      "iv_contribution": 0.0342
     },
     {
-      "bucket": "(5.444, 88883.222]",
-      "count": 131584,
-      "events": 6211,
-      "event_rate": 0.0472,
-      "woe": 0.7614,
-      "iv_contribution": 0.0726
+      "bucket": "(4.0, 11.0]",
+      "count": 100362,
+      "events": 6766,
+      "event_rate": 0.0674,
+      "woe": 0.9531,
+      "iv_contribution": 0.0947
     }
   ],
-  "FiO2": [
+  "early_warning_score": [
     {
-      "bucket": "(-50.001, 0.0]",
-      "count": 866438,
-      "events": 8575,
-      "event_rate": 0.0099,
-      "woe": -0.8392,
-      "iv_contribution": 0.2723
+      "bucket": "(-0.001, 1.0]",
+      "count": 844451,
+      "events": 15696,
+      "event_rate": 0.0186,
+      "woe": -0.3864,
+      "iv_contribution": 0.0683
     },
     {
-      "bucket": "(0.0, 0.3]",
-      "count": 62216,
-      "events": 2128,
-      "event_rate": 0.0342,
-      "woe": 0.4259,
-      "iv_contribution": 0.0091
+      "bucket": "(1.0, 2.0]",
+      "count": 411818,
+      "events": 11660,
+      "event_rate": 0.0283,
+      "woe": 0.0445,
+      "iv_contribution": 0.0005
     },
     {
-      "bucket": "(0.3, 0.4]",
-      "count": 275969,
-      "events": 10569,
-      "event_rate": 0.0383,
-      "woe": 0.5431,
-      "iv_contribution": 0.0692
+      "bucket": "(2.0, 3.0]",
+      "count": 172960,
+      "events": 7060,
+      "event_rate": 0.0408,
+      "woe": 0.4232,
+      "iv_contribution": 0.0246
     },
     {
-      "bucket": "(0.4, 0.5]",
-      "count": 200045,
-      "events": 7255,
-      "event_rate": 0.0363,
-      "woe": 0.4865,
-      "iv_contribution": 0.0391
-    },
-    {
-      "bucket": "(0.5, 4000.0]",
-      "count": 131584,
-      "events": 6211,
-      "event_rate": 0.0472,
-      "woe": 0.7614,
-      "iv_contribution": 0.0726
-    }
-  ],
-  "Lactate_abs_deviation_from_normal": [
-    {
-      "bucket": "(-0.001, 0.333]",
-      "count": 158206,
-      "events": 8149,
-      "event_rate": 0.0515,
-      "woe": 0.8533,
-      "iv_contribution": 0.1149
-    },
-    {
-      "bucket": "(0.333, 1.0]",
-      "count": 159851,
-      "events": 7724,
-      "event_rate": 0.0483,
-      "woe": 0.786,
-      "iv_contribution": 0.0951
-    },
-    {
-      "bucket": "(1.0, 1.667]",
-      "count": 1133515,
-      "events": 15767,
-      "event_rate": 0.0139,
-      "woe": -0.4948,
-      "iv_contribution": 0.1438
-    },
-    {
-      "bucket": "(1.667, 39.667]",
-      "count": 84680,
-      "events": 3098,
-      "event_rate": 0.0366,
-      "woe": 0.4956,
-      "iv_contribution": 0.0173
-    }
-  ],
-  "pH_deviation_from_normal": [
-    {
-      "bucket": "(-148.001, -1.6]",
-      "count": 930426,
-      "events": 11694,
-      "event_rate": 0.0126,
-      "woe": -0.5976,
-      "iv_contribution": 0.1645
-    },
-    {
-      "bucket": "(-1.6, -0.6]",
-      "count": 164776,
-      "events": 4846,
-      "event_rate": 0.0294,
-      "woe": 0.2698,
-      "iv_contribution": 0.0089
-    },
-    {
-      "bucket": "(-0.6, 0.0]",
-      "count": 143518,
-      "events": 4526,
-      "event_rate": 0.0315,
-      "woe": 0.3419,
-      "iv_contribution": 0.0129
-    },
-    {
-      "bucket": "(0.0, 0.8]",
-      "count": 165845,
-      "events": 6679,
-      "event_rate": 0.0403,
-      "woe": 0.5954,
-      "iv_contribution": 0.0514
-    },
-    {
-      "bucket": "(0.8, 10.6]",
-      "count": 131687,
-      "events": 6993,
-      "event_rate": 0.0531,
-      "woe": 0.8854,
-      "iv_contribution": 0.1047
-    }
-  ],
-  "pH": [
-    {
-      "bucket": "(-0.001, 7.32]",
-      "count": 930426,
-      "events": 11694,
-      "event_rate": 0.0126,
-      "woe": -0.5976,
-      "iv_contribution": 0.1645
-    },
-    {
-      "bucket": "(7.32, 7.37]",
-      "count": 164776,
-      "events": 4846,
-      "event_rate": 0.0294,
-      "woe": 0.2698,
-      "iv_contribution": 0.0089
-    },
-    {
-      "bucket": "(7.37, 7.4]",
-      "count": 143518,
-      "events": 4526,
-      "event_rate": 0.0315,
-      "woe": 0.3419,
-      "iv_contribution": 0.0129
-    },
-    {
-      "bucket": "(7.4, 7.44]",
-      "count": 165845,
-      "events": 6679,
-      "event_rate": 0.0403,
-      "woe": 0.5954,
-      "iv_contribution": 0.0514
-    },
-    {
-      "bucket": "(7.44, 7.93]",
-      "count": 131687,
-      "events": 6993,
-      "event_rate": 0.0531,
-      "woe": 0.8854,
-      "iv_contribution": 0.1047
-    }
-  ],
-  "PaCO2_abs_deviation_from_normal": [
-    {
-      "bucket": "(-0.001, 0.4]",
-      "count": 199832,
-      "events": 7024,
-      "event_rate": 0.0351,
-      "woe": 0.454,
-      "iv_contribution": 0.0335
-    },
-    {
-      "bucket": "(0.4, 0.8]",
-      "count": 140489,
-      "events": 5093,
-      "event_rate": 0.0363,
-      "woe": 0.4861,
-      "iv_contribution": 0.0274
-    },
-    {
-      "bucket": "(0.8, 1.4]",
-      "count": 153192,
-      "events": 5821,
-      "event_rate": 0.038,
-      "woe": 0.5349,
-      "iv_contribution": 0.0371
-    },
-    {
-      "bucket": "(1.4, 2.6]",
-      "count": 130000,
-      "events": 5683,
-      "event_rate": 0.0437,
-      "woe": 0.681,
-      "iv_contribution": 0.055
-    },
-    {
-      "bucket": "(2.6, 8.0]",
-      "count": 909022,
-      "events": 10977,
-      "event_rate": 0.0121,
-      "woe": -0.6381,
-      "iv_contribution": 0.18
-    },
-    {
-      "bucket": "(8.0, 12.0]",
-      "count": 3717,
-      "events": 140,
-      "event_rate": 0.0377,
-      "woe": 0.5291,
-      "iv_contribution": 0.0009
+      "bucket": "(3.0, 11.0]",
+      "count": 114134,
+      "events": 7433,
+      "event_rate": 0.0651,
+      "woe": 0.9161,
+      "iv_contribution": 0.0976
     }
   ],
   "Temp_max_6h": [
     {
       "bucket": "(20.999, 36.33]",
-      "count": 154635,
-      "events": 3352,
-      "event_rate": 0.0217,
-      "woe": -0.0432,
-      "iv_contribution": 0.0002
+      "count": 155059,
+      "events": 3776,
+      "event_rate": 0.0244,
+      "woe": -0.1103,
+      "iv_contribution": 0.0012
     },
     {
       "bucket": "(36.33, 36.61]",
-      "count": 161583,
-      "events": 2669,
-      "event_rate": 0.0165,
-      "woe": -0.3202,
-      "iv_contribution": 0.0093
+      "count": 161825,
+      "events": 2911,
+      "event_rate": 0.018,
+      "woe": -0.4196,
+      "iv_contribution": 0.0152
     },
     {
-      "bucket": "(36.61, 36.8]",
-      "count": 145161,
-      "events": 2562,
-      "event_rate": 0.0176,
-      "woe": -0.2528,
-      "iv_contribution": 0.0054
-    },
-    {
-      "bucket": "(36.8, 36.83]",
-      "count": 222053,
-      "events": 1580,
-      "event_rate": 0.0071,
-      "woe": -1.1718,
-      "iv_contribution": 0.1188
+      "bucket": "(36.61, 36.83]",
+      "count": 370853,
+      "events": 7781,
+      "event_rate": 0.021,
+      "woe": -0.2628,
+      "iv_contribution": 0.0147
     },
     {
       "bucket": "(36.83, 37.0]",
-      "count": 164493,
-      "events": 2669,
-      "event_rate": 0.0162,
-      "woe": -0.3384,
-      "iv_contribution": 0.0105
+      "count": 164912,
+      "events": 3088,
+      "event_rate": 0.0187,
+      "woe": -0.3788,
+      "iv_contribution": 0.0129
     },
     {
       "bucket": "(37.0, 37.11]",
-      "count": 82918,
-      "events": 1335,
-      "event_rate": 0.0161,
-      "woe": -0.3461,
-      "iv_contribution": 0.0055
+      "count": 83120,
+      "events": 1537,
+      "event_rate": 0.0185,
+      "woe": -0.3914,
+      "iv_contribution": 0.0069
     },
     {
       "bucket": "(37.11, 37.33]",
-      "count": 155397,
-      "events": 3380,
-      "event_rate": 0.0218,
-      "woe": -0.0397,
-      "iv_contribution": 0.0002
+      "count": 155752,
+      "events": 3735,
+      "event_rate": 0.024,
+      "woe": -0.1261,
+      "iv_contribution": 0.0015
     },
     {
       "bucket": "(37.33, 37.6]",
-      "count": 159726,
-      "events": 3679,
-      "event_rate": 0.023,
-      "woe": 0.0189,
-      "iv_contribution": 0.0
+      "count": 160151,
+      "events": 4104,
+      "event_rate": 0.0256,
+      "woe": -0.058,
+      "iv_contribution": 0.0003
     },
     {
       "bucket": "(37.6, 37.94]",
-      "count": 142824,
-      "events": 4842,
-      "event_rate": 0.0339,
-      "woe": 0.4166,
-      "iv_contribution": 0.0198
+      "count": 143259,
+      "events": 5277,
+      "event_rate": 0.0368,
+      "woe": 0.3164,
+      "iv_contribution": 0.0108
     },
     {
       "bucket": "(37.94, 50.0]",
-      "count": 147462,
-      "events": 8670,
-      "event_rate": 0.0588,
-      "woe": 0.9932,
-      "iv_contribution": 0.1561
+      "count": 148432,
+      "events": 9640,
+      "event_rate": 0.0649,
+      "woe": 0.913,
+      "iv_contribution": 0.1259
     }
   ],
-  "PaCO2_hours_since": [
-    {
-      "bucket": "(-1.001, 0.0]",
-      "count": 941266,
-      "events": 12257,
-      "event_rate": 0.013,
-      "woe": -0.5617,
-      "iv_contribution": 0.1493
-    },
-    {
-      "bucket": "(0.0, 3.0]",
-      "count": 169803,
-      "events": 7091,
-      "event_rate": 0.0418,
-      "woe": 0.6332,
-      "iv_contribution": 0.0606
-    },
-    {
-      "bucket": "(3.0, 7.0]",
-      "count": 120221,
-      "events": 4372,
-      "event_rate": 0.0364,
-      "woe": 0.4894,
-      "iv_contribution": 0.0238
-    },
-    {
-      "bucket": "(7.0, 17.0]",
-      "count": 155017,
-      "events": 4541,
-      "event_rate": 0.0293,
-      "woe": 0.2658,
-      "iv_contribution": 0.0081
-    },
-    {
-      "bucket": "(17.0, 325.0]",
-      "count": 149945,
-      "events": 6477,
-      "event_rate": 0.0432,
-      "woe": 0.6685,
-      "iv_contribution": 0.0608
-    }
-  ],
-  "BUN_deviation_from_normal": [
-    {
-      "bucket": "(-2.274, -2.0]",
-      "count": 235849,
-      "events": 1514,
-      "event_rate": 0.0064,
-      "woe": -1.2754,
-      "iv_contribution": 0.1435
-    },
-    {
-      "bucket": "(-2.0, -1.889]",
-      "count": 78948,
-      "events": 560,
-      "event_rate": 0.0071,
-      "woe": -1.1743,
-      "iv_contribution": 0.0424
-    },
-    {
-      "bucket": "(-1.889, -0.867]",
-      "count": 152810,
-      "events": 3026,
-      "event_rate": 0.0198,
-      "woe": -0.1355,
-      "iv_contribution": 0.0017
-    },
-    {
-      "bucket": "(-0.867, -0.538]",
-      "count": 148316,
-      "events": 3026,
-      "event_rate": 0.0204,
-      "woe": -0.1051,
-      "iv_contribution": 0.001
-    },
-    {
-      "bucket": "(-0.538, -0.222]",
-      "count": 165372,
-      "events": 2876,
-      "event_rate": 0.0174,
-      "woe": -0.2678,
-      "iv_contribution": 0.0068
-    },
-    {
-      "bucket": "(-0.222, 0.111]",
-      "count": 149007,
-      "events": 3170,
-      "event_rate": 0.0213,
-      "woe": -0.0623,
-      "iv_contribution": 0.0004
-    },
-    {
-      "bucket": "(0.111, 0.556]",
-      "count": 149132,
-      "events": 3559,
-      "event_rate": 0.0239,
-      "woe": 0.0552,
-      "iv_contribution": 0.0003
-    },
-    {
-      "bucket": "(0.556, 1.333]",
-      "count": 151509,
-      "events": 4990,
-      "event_rate": 0.0329,
-      "woe": 0.3866,
-      "iv_contribution": 0.0178
-    },
-    {
-      "bucket": "(1.333, 3.111]",
-      "count": 153879,
-      "events": 5704,
-      "event_rate": 0.0371,
-      "woe": 0.5091,
-      "iv_contribution": 0.0334
-    },
-    {
-      "bucket": "(3.111, 46.455]",
-      "count": 151430,
-      "events": 6313,
-      "event_rate": 0.0417,
-      "woe": 0.6314,
-      "iv_contribution": 0.0537
-    }
-  ],
-  "pH_abs_deviation_from_normal": [
-    {
-      "bucket": "(-0.001, 0.4]",
-      "count": 186824,
-      "events": 6520,
-      "event_rate": 0.0349,
-      "woe": 0.4466,
-      "iv_contribution": 0.0302
-    },
-    {
-      "bucket": "(0.4, 0.6]",
-      "count": 125927,
-      "events": 4049,
-      "event_rate": 0.0322,
-      "woe": 0.3619,
-      "iv_contribution": 0.0128
-    },
-    {
-      "bucket": "(0.6, 1.2]",
-      "count": 165973,
-      "events": 6768,
-      "event_rate": 0.0408,
-      "woe": 0.6084,
-      "iv_contribution": 0.054
-    },
-    {
-      "bucket": "(1.2, 1.8]",
-      "count": 135887,
-      "events": 5452,
-      "event_rate": 0.0401,
-      "woe": 0.5915,
-      "iv_contribution": 0.0415
-    },
-    {
-      "bucket": "(1.8, 148.0]",
-      "count": 921641,
-      "events": 11949,
-      "event_rate": 0.013,
-      "woe": -0.5661,
-      "iv_contribution": 0.1483
-    }
-  ],
-  "early_warning_score_avg_6h": [
-    {
-      "bucket": "(-0.001, 0.667]",
-      "count": 215617,
-      "events": 3154,
-      "event_rate": 0.0146,
-      "woe": -0.4437,
-      "iv_contribution": 0.0225
-    },
-    {
-      "bucket": "(0.667, 1.0]",
-      "count": 348169,
-      "events": 4063,
-      "event_rate": 0.0117,
-      "woe": -0.6726,
-      "iv_contribution": 0.0755
-    },
-    {
-      "bucket": "(1.0, 1.167]",
-      "count": 115875,
-      "events": 1836,
-      "event_rate": 0.0158,
-      "woe": -0.3624,
-      "iv_contribution": 0.0084
-    },
-    {
-      "bucket": "(1.167, 1.333]",
-      "count": 120392,
-      "events": 1854,
-      "event_rate": 0.0154,
-      "woe": -0.3914,
-      "iv_contribution": 0.01
-    },
-    {
-      "bucket": "(1.333, 1.667]",
-      "count": 201548,
-      "events": 3783,
-      "event_rate": 0.0188,
-      "woe": -0.1902,
-      "iv_contribution": 0.0043
-    },
-    {
-      "bucket": "(1.667, 1.833]",
-      "count": 83077,
-      "events": 1981,
-      "event_rate": 0.0238,
-      "woe": 0.0545,
-      "iv_contribution": 0.0002
-    },
-    {
-      "bucket": "(1.833, 2.167]",
-      "count": 149191,
-      "events": 4481,
-      "event_rate": 0.03,
-      "woe": 0.2915,
-      "iv_contribution": 0.0095
-    },
-    {
-      "bucket": "(2.167, 3.0]",
-      "count": 178297,
-      "events": 6587,
-      "event_rate": 0.0369,
-      "woe": 0.5056,
-      "iv_contribution": 0.038
-    },
-    {
-      "bucket": "(3.0, 10.0]",
-      "count": 124086,
-      "events": 6999,
-      "event_rate": 0.0564,
-      "woe": 0.9492,
-      "iv_contribution": 0.1172
-    }
-  ],
-  "PaCO2": [
-    {
-      "bucket": "(-0.001, 31.0]",
-      "count": 923637,
-      "events": 12016,
-      "event_rate": 0.013,
-      "woe": -0.5626,
-      "iv_contribution": 0.147
-    },
-    {
-      "bucket": "(31.0, 37.0]",
-      "count": 182706,
-      "events": 7022,
-      "event_rate": 0.0384,
-      "woe": 0.5468,
-      "iv_contribution": 0.0465
-    },
-    {
-      "bucket": "(37.0, 40.0]",
-      "count": 127520,
-      "events": 4320,
-      "event_rate": 0.0339,
-      "woe": 0.4159,
-      "iv_contribution": 0.0176
-    },
-    {
-      "bucket": "(40.0, 45.0]",
-      "count": 164745,
-      "events": 5940,
-      "event_rate": 0.0361,
-      "woe": 0.4804,
-      "iv_contribution": 0.0313
-    },
-    {
-      "bucket": "(45.0, 100.0]",
-      "count": 137644,
-      "events": 5440,
-      "event_rate": 0.0395,
-      "woe": 0.5758,
-      "iv_contribution": 0.0395
-    }
-  ],
-  "PaCO2_deviation_from_normal": [
-    {
-      "bucket": "(-8.001, -1.8]",
-      "count": 923637,
-      "events": 12016,
-      "event_rate": 0.013,
-      "woe": -0.5626,
-      "iv_contribution": 0.147
-    },
-    {
-      "bucket": "(-1.8, -0.6]",
-      "count": 182706,
-      "events": 7022,
-      "event_rate": 0.0384,
-      "woe": 0.5468,
-      "iv_contribution": 0.0465
-    },
-    {
-      "bucket": "(-0.6, 0.0]",
-      "count": 127520,
-      "events": 4320,
-      "event_rate": 0.0339,
-      "woe": 0.4159,
-      "iv_contribution": 0.0176
-    },
-    {
-      "bucket": "(0.0, 1.0]",
-      "count": 164745,
-      "events": 5940,
-      "event_rate": 0.0361,
-      "woe": 0.4804,
-      "iv_contribution": 0.0313
-    },
-    {
-      "bucket": "(1.0, 12.0]",
-      "count": 137644,
-      "events": 5440,
-      "event_rate": 0.0395,
-      "woe": 0.5758,
-      "iv_contribution": 0.0395
-    }
-  ],
-  "WBC_avg_6h": [
-    {
-      "bucket": "(-0.001, 4.467]",
-      "count": 461180,
-      "events": 4162,
-      "event_rate": 0.009,
-      "woe": -0.9323,
-      "iv_contribution": 0.1721
-    },
-    {
-      "bucket": "(4.467, 6.5]",
-      "count": 153846,
-      "events": 2904,
-      "event_rate": 0.0189,
-      "woe": -0.1844,
-      "iv_contribution": 0.0031
-    },
-    {
-      "bucket": "(6.5, 8.1]",
-      "count": 158726,
-      "events": 3239,
-      "event_rate": 0.0204,
-      "woe": -0.1049,
-      "iv_contribution": 0.0011
-    },
-    {
-      "bucket": "(8.1, 9.5]",
-      "count": 148662,
-      "events": 3542,
-      "event_rate": 0.0238,
-      "woe": 0.0536,
-      "iv_contribution": 0.0003
-    },
-    {
-      "bucket": "(9.5, 11.1]",
-      "count": 157625,
-      "events": 4401,
-      "event_rate": 0.0279,
-      "woe": 0.2163,
-      "iv_contribution": 0.0053
-    },
-    {
-      "bucket": "(11.1, 13.0]",
-      "count": 153279,
-      "events": 4853,
-      "event_rate": 0.0317,
-      "woe": 0.3459,
-      "iv_contribution": 0.0141
-    },
-    {
-      "bucket": "(13.0, 16.067]",
-      "count": 149428,
-      "events": 4904,
-      "event_rate": 0.0328,
-      "woe": 0.383,
-      "iv_contribution": 0.0172
-    },
-    {
-      "bucket": "(16.067, 440.0]",
-      "count": 153506,
-      "events": 6733,
-      "event_rate": 0.0439,
-      "woe": 0.6845,
-      "iv_contribution": 0.0658
-    }
-  ],
-  "pH_hours_since": [
-    {
-      "bucket": "(-1.001, 0.0]",
-      "count": 943295,
-      "events": 12627,
-      "event_rate": 0.0134,
-      "woe": -0.5337,
-      "iv_contribution": 0.1368
-    },
-    {
-      "bucket": "(0.0, 2.0]",
-      "count": 133244,
-      "events": 5223,
-      "event_rate": 0.0392,
-      "woe": 0.5673,
-      "iv_contribution": 0.0369
-    },
-    {
-      "bucket": "(2.0, 7.0]",
-      "count": 172709,
-      "events": 6055,
-      "event_rate": 0.0351,
-      "woe": 0.4514,
-      "iv_contribution": 0.0286
-    },
-    {
-      "bucket": "(7.0, 16.0]",
-      "count": 138542,
-      "events": 4317,
-      "event_rate": 0.0312,
-      "woe": 0.3295,
-      "iv_contribution": 0.0115
-    },
-    {
-      "bucket": "(16.0, 325.0]",
-      "count": 148462,
-      "events": 6516,
-      "event_rate": 0.0439,
-      "woe": 0.6852,
-      "iv_contribution": 0.0638
-    }
-  ],
-  "Magnesium_deviation_from_normal": [
-    {
-      "bucket": "(-7.801, -1.8]",
-      "count": 490580,
-      "events": 4078,
-      "event_rate": 0.0083,
-      "woe": -1.0152,
-      "iv_contribution": 0.2098
-    },
-    {
-      "bucket": "(-1.8, -1.0]",
-      "count": 136477,
-      "events": 3196,
-      "event_rate": 0.0234,
-      "woe": 0.0359,
-      "iv_contribution": 0.0001
-    },
-    {
-      "bucket": "(-1.0, -0.2]",
-      "count": 259824,
-      "events": 6990,
-      "event_rate": 0.0269,
-      "woe": 0.1781,
-      "iv_contribution": 0.0058
-    },
-    {
-      "bucket": "(-0.2, 0.2]",
-      "count": 150925,
-      "events": 4445,
-      "event_rate": 0.0295,
-      "woe": 0.2713,
-      "iv_contribution": 0.0082
-    },
-    {
-      "bucket": "(0.2, 0.6]",
-      "count": 137037,
-      "events": 4013,
-      "event_rate": 0.0293,
-      "woe": 0.2654,
-      "iv_contribution": 0.0071
-    },
-    {
-      "bucket": "(0.6, 1.0]",
-      "count": 108400,
-      "events": 3624,
-      "event_rate": 0.0334,
-      "woe": 0.4022,
-      "iv_contribution": 0.0139
-    },
-    {
-      "bucket": "(1.0, 1.8]",
-      "count": 135359,
-      "events": 4288,
-      "event_rate": 0.0317,
-      "woe": 0.3465,
-      "iv_contribution": 0.0125
-    },
-    {
-      "bucket": "(1.8, 31.4]",
-      "count": 117650,
-      "events": 4104,
-      "event_rate": 0.0349,
-      "woe": 0.4462,
-      "iv_contribution": 0.019
-    }
-  ],
-  "Magnesium": [
-    {
-      "bucket": "(-0.001, 1.5]",
-      "count": 490580,
-      "events": 4078,
-      "event_rate": 0.0083,
-      "woe": -1.0152,
-      "iv_contribution": 0.2098
-    },
-    {
-      "bucket": "(1.5, 1.7]",
-      "count": 136477,
-      "events": 3196,
-      "event_rate": 0.0234,
-      "woe": 0.0359,
-      "iv_contribution": 0.0001
-    },
-    {
-      "bucket": "(1.7, 1.9]",
-      "count": 259824,
-      "events": 6990,
-      "event_rate": 0.0269,
-      "woe": 0.1781,
-      "iv_contribution": 0.0058
-    },
-    {
-      "bucket": "(1.9, 2.0]",
-      "count": 150925,
-      "events": 4445,
-      "event_rate": 0.0295,
-      "woe": 0.2713,
-      "iv_contribution": 0.0082
-    },
-    {
-      "bucket": "(2.0, 2.1]",
-      "count": 137037,
-      "events": 4013,
-      "event_rate": 0.0293,
-      "woe": 0.2654,
-      "iv_contribution": 0.0071
-    },
-    {
-      "bucket": "(2.1, 2.2]",
-      "count": 108400,
-      "events": 3624,
-      "event_rate": 0.0334,
-      "woe": 0.4022,
-      "iv_contribution": 0.0139
-    },
-    {
-      "bucket": "(2.2, 2.4]",
-      "count": 135359,
-      "events": 4288,
-      "event_rate": 0.0317,
-      "woe": 0.3465,
-      "iv_contribution": 0.0125
-    },
-    {
-      "bucket": "(2.4, 9.8]",
-      "count": 117650,
-      "events": 4104,
-      "event_rate": 0.0349,
-      "woe": 0.4462,
-      "iv_contribution": 0.019
-    }
-  ],
-  "WBC_deviation_from_normal": [
-    {
-      "bucket": "(-2.3859999999999997, -2.231]",
-      "count": 297338,
-      "events": 2074,
-      "event_rate": 0.007,
-      "woe": -1.1919,
-      "iv_contribution": 0.1632
-    },
-    {
-      "bucket": "(-2.231, -2.077]",
-      "count": 48503,
-      "events": 432,
-      "event_rate": 0.0089,
-      "woe": -0.9446,
-      "iv_contribution": 0.0185
-    },
-    {
-      "bucket": "(-2.077, -0.569]",
-      "count": 117261,
-      "events": 2524,
-      "event_rate": 0.0215,
-      "woe": -0.0503,
-      "iv_contribution": 0.0002
-    },
-    {
-      "bucket": "(-0.569, -0.0154]",
-      "count": 157321,
-      "events": 2843,
-      "event_rate": 0.0181,
-      "woe": -0.2288,
-      "iv_contribution": 0.0048
-    },
-    {
-      "bucket": "(-0.0154, 0.415]",
-      "count": 152853,
-      "events": 3349,
-      "event_rate": 0.0219,
-      "woe": -0.0323,
-      "iv_contribution": 0.0001
-    },
-    {
-      "bucket": "(0.415, 0.846]",
-      "count": 157121,
-      "events": 3808,
-      "event_rate": 0.0242,
-      "woe": 0.071,
-      "iv_contribution": 0.0005
-    },
-    {
-      "bucket": "(0.846, 1.308]",
-      "count": 152197,
-      "events": 4007,
-      "event_rate": 0.0263,
-      "woe": 0.1559,
-      "iv_contribution": 0.0026
-    },
-    {
-      "bucket": "(1.308, 1.862]",
-      "count": 147073,
-      "events": 4145,
-      "event_rate": 0.0282,
-      "woe": 0.2259,
-      "iv_contribution": 0.0055
-    },
-    {
-      "bucket": "(1.862, 2.815]",
-      "count": 153390,
-      "events": 5009,
-      "event_rate": 0.0327,
-      "woe": 0.3778,
-      "iv_contribution": 0.0171
-    },
-    {
-      "bucket": "(2.815, 133.154]",
-      "count": 153195,
-      "events": 6547,
-      "event_rate": 0.0427,
-      "woe": 0.6573,
-      "iv_contribution": 0.0597
-    }
-  ],
-  "FiO2_hours_since": [
-    {
-      "bucket": "(-1.001, 0.0]",
-      "count": 992806,
-      "events": 14665,
-      "event_rate": 0.0148,
-      "woe": -0.4338,
-      "iv_contribution": 0.0995
-    },
-    {
-      "bucket": "(0.0, 1.0]",
-      "count": 96249,
-      "events": 4777,
-      "event_rate": 0.0496,
-      "woe": 0.8142,
-      "iv_contribution": 0.0624
-    },
-    {
-      "bucket": "(1.0, 4.0]",
-      "count": 151474,
-      "events": 7250,
-      "event_rate": 0.0479,
-      "woe": 0.776,
-      "iv_contribution": 0.0874
-    },
-    {
-      "bucket": "(4.0, 15.0]",
-      "count": 148919,
-      "events": 3105,
-      "event_rate": 0.0209,
-      "woe": -0.0828,
+  "Temp": [
+    {
+      "bucket": "(20.898999999999997, 36.06]",
+      "count": 160871,
+      "events": 4403,
+      "event_rate": 0.0274,
+      "woe": 0.0096,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(36.06, 36.33]",
+      "count": 149314,
+      "events": 2938,
+      "event_rate": 0.0197,
+      "woe": -0.3282,
+      "iv_contribution": 0.009
+    },
+    {
+      "bucket": "(36.33, 36.56]",
+      "count": 158892,
+      "events": 3065,
+      "event_rate": 0.0193,
+      "woe": -0.3485,
+      "iv_contribution": 0.0106
+    },
+    {
+      "bucket": "(36.56, 36.72]",
+      "count": 162361,
+      "events": 3224,
+      "event_rate": 0.0199,
+      "woe": -0.3189,
+      "iv_contribution": 0.0092
+    },
+    {
+      "bucket": "(36.72, 36.83]",
+      "count": 203932,
+      "events": 4321,
+      "event_rate": 0.0212,
+      "woe": -0.2527,
+      "iv_contribution": 0.0075
+    },
+    {
+      "bucket": "(36.83, 37.0]",
+      "count": 157866,
+      "events": 3094,
+      "event_rate": 0.0196,
+      "woe": -0.3323,
+      "iv_contribution": 0.0097
+    },
+    {
+      "bucket": "(37.0, 37.17]",
+      "count": 97604,
+      "events": 2204,
+      "event_rate": 0.0226,
+      "woe": -0.1875,
+      "iv_contribution": 0.002
+    },
+    {
+      "bucket": "(37.17, 37.4]",
+      "count": 159691,
+      "events": 4016,
+      "event_rate": 0.0251,
+      "woe": -0.0773,
       "iv_contribution": 0.0006
     },
     {
-      "bucket": "(15.0, 328.0]",
-      "count": 146804,
-      "events": 4941,
-      "event_rate": 0.0337,
-      "woe": 0.4091,
-      "iv_contribution": 0.0195
+      "bucket": "(37.4, 37.72]",
+      "count": 140156,
+      "events": 4763,
+      "event_rate": 0.034,
+      "woe": 0.2328,
+      "iv_contribution": 0.0055
+    },
+    {
+      "bucket": "(37.72, 50.0]",
+      "count": 152676,
+      "events": 9821,
+      "event_rate": 0.0643,
+      "woe": 0.9028,
+      "iv_contribution": 0.126
+    }
+  ],
+  "Temp_avg_6h": [
+    {
+      "bucket": "(20.999, 36.128]",
+      "count": 154422,
+      "events": 4188,
+      "event_rate": 0.0271,
+      "woe": 0.0002,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(36.128, 36.4]",
+      "count": 163363,
+      "events": 3140,
+      "event_rate": 0.0192,
+      "woe": -0.3521,
+      "iv_contribution": 0.0112
+    },
+    {
+      "bucket": "(36.4, 36.58]",
+      "count": 145791,
+      "events": 2739,
+      "event_rate": 0.0188,
+      "woe": -0.3754,
+      "iv_contribution": 0.0112
+    },
+    {
+      "bucket": "(36.58, 36.733]",
+      "count": 156054,
+      "events": 3095,
+      "event_rate": 0.0198,
+      "woe": -0.3202,
+      "iv_contribution": 0.0089
+    },
+    {
+      "bucket": "(36.733, 36.83]",
+      "count": 215188,
+      "events": 4612,
+      "event_rate": 0.0214,
+      "woe": -0.241,
+      "iv_contribution": 0.0072
+    },
+    {
+      "bucket": "(36.83, 36.925]",
+      "count": 91493,
+      "events": 1942,
+      "event_rate": 0.0212,
+      "woe": -0.2508,
+      "iv_contribution": 0.0033
+    },
+    {
+      "bucket": "(36.925, 37.103]",
+      "count": 154185,
+      "events": 3272,
+      "event_rate": 0.0212,
+      "woe": -0.2511,
+      "iv_contribution": 0.0056
+    },
+    {
+      "bucket": "(37.103, 37.333]",
+      "count": 154371,
+      "events": 4257,
+      "event_rate": 0.0276,
+      "woe": 0.0173,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(37.333, 37.667]",
+      "count": 154447,
+      "events": 5194,
+      "event_rate": 0.0336,
+      "woe": 0.222,
+      "iv_contribution": 0.0055
+    },
+    {
+      "bucket": "(37.667, 43.517]",
+      "count": 154049,
+      "events": 9410,
+      "event_rate": 0.0611,
+      "woe": 0.8476,
+      "iv_contribution": 0.1089
+    }
+  ],
+  "Temp_deviation_from_normal": [
+    {
+      "bucket": "(-18.883000000000003, -0.85]",
+      "count": 154781,
+      "events": 4136,
+      "event_rate": 0.0267,
+      "woe": -0.015,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(-0.85, -0.5]",
+      "count": 156895,
+      "events": 3048,
+      "event_rate": 0.0194,
+      "woe": -0.3413,
+      "iv_contribution": 0.0101
+    },
+    {
+      "bucket": "(-0.5, -0.2]",
+      "count": 159199,
+      "events": 3156,
+      "event_rate": 0.0198,
+      "woe": -0.3206,
+      "iv_contribution": 0.0091
+    },
+    {
+      "bucket": "(-0.2, -0.0588]",
+      "count": 151447,
+      "events": 2969,
+      "event_rate": 0.0196,
+      "woe": -0.332,
+      "iv_contribution": 0.0093
+    },
+    {
+      "bucket": "(-0.0588, 0.153]",
+      "count": 149394,
+      "events": 3226,
+      "event_rate": 0.0216,
+      "woe": -0.2333,
+      "iv_contribution": 0.0047
+    },
+    {
+      "bucket": "(0.153, 0.294]",
+      "count": 159300,
+      "events": 3285,
+      "event_rate": 0.0206,
+      "woe": -0.2804,
+      "iv_contribution": 0.0071
+    },
+    {
+      "bucket": "(0.294, 0.529]",
+      "count": 155336,
+      "events": 3316,
+      "event_rate": 0.0213,
+      "woe": -0.2451,
+      "iv_contribution": 0.0054
+    },
+    {
+      "bucket": "(0.529, 0.8]",
+      "count": 153056,
+      "events": 4124,
+      "event_rate": 0.0269,
+      "woe": -0.0065,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(0.8, 1.235]",
+      "count": 153030,
+      "events": 5438,
+      "event_rate": 0.0355,
+      "woe": 0.2791,
+      "iv_contribution": 0.0088
+    },
+    {
+      "bucket": "(1.235, 17.0]",
+      "count": 150925,
+      "events": 9151,
+      "event_rate": 0.0606,
+      "woe": 0.8397,
+      "iv_contribution": 0.1043
+    }
+  ],
+  "Temp_abs_deviation_from_normal": [
+    {
+      "bucket": "(-0.001, 0.106]",
+      "count": 163425,
+      "events": 3360,
+      "event_rate": 0.0206,
+      "woe": -0.2834,
+      "iv_contribution": 0.0075
+    },
+    {
+      "bucket": "(0.106, 0.176]",
+      "count": 153905,
+      "events": 3125,
+      "event_rate": 0.0203,
+      "woe": -0.2962,
+      "iv_contribution": 0.0076
+    },
+    {
+      "bucket": "(0.176, 0.282]",
+      "count": 156213,
+      "events": 3443,
+      "event_rate": 0.022,
+      "woe": -0.2124,
+      "iv_contribution": 0.0041
+    },
+    {
+      "bucket": "(0.282, 0.4]",
+      "count": 143819,
+      "events": 2970,
+      "event_rate": 0.0207,
+      "woe": -0.2789,
+      "iv_contribution": 0.0064
+    },
+    {
+      "bucket": "(0.4, 0.529]",
+      "count": 164109,
+      "events": 3296,
+      "event_rate": 0.0201,
+      "woe": -0.3073,
+      "iv_contribution": 0.0087
+    },
+    {
+      "bucket": "(0.529, 0.647]",
+      "count": 146564,
+      "events": 3327,
+      "event_rate": 0.0227,
+      "woe": -0.1822,
+      "iv_contribution": 0.0029
+    },
+    {
+      "bucket": "(0.647, 0.8]",
+      "count": 153081,
+      "events": 3506,
+      "event_rate": 0.0229,
+      "woe": -0.1731,
+      "iv_contribution": 0.0027
+    },
+    {
+      "bucket": "(0.8, 1.024]",
+      "count": 153889,
+      "events": 4176,
+      "event_rate": 0.0271,
+      "woe": 0.0008,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(1.024, 1.353]",
+      "count": 156040,
+      "events": 5370,
+      "event_rate": 0.0344,
+      "woe": 0.2459,
+      "iv_contribution": 0.0069
+    },
+    {
+      "bucket": "(1.353, 18.882]",
+      "count": 152318,
+      "events": 9276,
+      "event_rate": 0.0609,
+      "woe": 0.8444,
+      "iv_contribution": 0.1067
+    }
+  ],
+  "early_warning_score_min_6h": [
+    {
+      "bucket": "(-0.001, 1.0]",
+      "count": 1257588,
+      "events": 27384,
+      "event_rate": 0.0218,
+      "woe": -0.2248,
+      "iv_contribution": 0.0371
+    },
+    {
+      "bucket": "(1.0, 2.0]",
+      "count": 196412,
+      "events": 8745,
+      "event_rate": 0.0445,
+      "woe": 0.514,
+      "iv_contribution": 0.0432
+    },
+    {
+      "bucket": "(2.0, 10.0]",
+      "count": 89363,
+      "events": 5720,
+      "event_rate": 0.064,
+      "woe": 0.8976,
+      "iv_contribution": 0.0727
+    }
+  ],
+  "Resp_avg_6h": [
+    {
+      "bucket": "(0.999, 14.0]",
+      "count": 164045,
+      "events": 3889,
+      "event_rate": 0.0237,
+      "woe": -0.1378,
+      "iv_contribution": 0.0019
+    },
+    {
+      "bucket": "(14.0, 15.5]",
+      "count": 155942,
+      "events": 3323,
+      "event_rate": 0.0213,
+      "woe": -0.2469,
+      "iv_contribution": 0.0055
+    },
+    {
+      "bucket": "(15.5, 16.5]",
+      "count": 152484,
+      "events": 2995,
+      "event_rate": 0.0196,
+      "woe": -0.3301,
+      "iv_contribution": 0.0092
+    },
+    {
+      "bucket": "(16.5, 17.5]",
+      "count": 161162,
+      "events": 3091,
+      "event_rate": 0.0192,
+      "woe": -0.3543,
+      "iv_contribution": 0.0111
+    },
+    {
+      "bucket": "(17.5, 18.0]",
+      "count": 153282,
+      "events": 3042,
+      "event_rate": 0.0198,
+      "woe": -0.3195,
+      "iv_contribution": 0.0087
+    },
+    {
+      "bucket": "(18.0, 19.0]",
+      "count": 157376,
+      "events": 3297,
+      "event_rate": 0.0209,
+      "woe": -0.2643,
+      "iv_contribution": 0.0063
+    },
+    {
+      "bucket": "(19.0, 20.0]",
+      "count": 146894,
+      "events": 3669,
+      "event_rate": 0.025,
+      "woe": -0.0843,
+      "iv_contribution": 0.0007
+    },
+    {
+      "bucket": "(20.0, 21.417]",
+      "count": 144325,
+      "events": 4103,
+      "event_rate": 0.0284,
+      "woe": 0.0487,
+      "iv_contribution": 0.0002
+    },
+    {
+      "bucket": "(21.417, 23.75]",
+      "count": 154366,
+      "events": 5375,
+      "event_rate": 0.0348,
+      "woe": 0.258,
+      "iv_contribution": 0.0075
+    },
+    {
+      "bucket": "(23.75, 98.0]",
+      "count": 153487,
+      "events": 9065,
+      "event_rate": 0.0591,
+      "woe": 0.8118,
+      "iv_contribution": 0.0977
+    }
+  ],
+  "Resp_max_6h": [
+    {
+      "bucket": "(0.999, 16.0]",
+      "count": 172425,
+      "events": 4409,
+      "event_rate": 0.0256,
+      "woe": -0.0602,
+      "iv_contribution": 0.0004
+    },
+    {
+      "bucket": "(16.0, 18.0]",
+      "count": 299874,
+      "events": 5809,
+      "event_rate": 0.0194,
+      "woe": -0.3443,
+      "iv_contribution": 0.0196
+    },
+    {
+      "bucket": "(18.0, 20.0]",
+      "count": 260735,
+      "events": 5222,
+      "event_rate": 0.02,
+      "woe": -0.3102,
+      "iv_contribution": 0.0141
+    },
+    {
+      "bucket": "(20.0, 21.0]",
+      "count": 101676,
+      "events": 2262,
+      "event_rate": 0.0222,
+      "woe": -0.2028,
+      "iv_contribution": 0.0025
+    },
+    {
+      "bucket": "(21.0, 22.0]",
+      "count": 138439,
+      "events": 2972,
+      "event_rate": 0.0215,
+      "woe": -0.2393,
+      "iv_contribution": 0.0046
+    },
+    {
+      "bucket": "(22.0, 24.0]",
+      "count": 189663,
+      "events": 5136,
+      "event_rate": 0.0271,
+      "woe": -0.0014,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(24.0, 25.5]",
+      "count": 75966,
+      "events": 2276,
+      "event_rate": 0.03,
+      "woe": 0.1028,
+      "iv_contribution": 0.0005
+    },
+    {
+      "bucket": "(25.5, 28.0]",
+      "count": 150811,
+      "events": 5421,
+      "event_rate": 0.0359,
+      "woe": 0.291,
+      "iv_contribution": 0.0095
+    },
+    {
+      "bucket": "(28.0, 100.0]",
+      "count": 153774,
+      "events": 8342,
+      "event_rate": 0.0542,
+      "woe": 0.7217,
+      "iv_contribution": 0.074
+    }
+  ],
+  "Resp_min_6h": [
+    {
+      "bucket": "(0.999, 11.0]",
+      "count": 184695,
+      "events": 4260,
+      "event_rate": 0.0231,
+      "woe": -0.1659,
+      "iv_contribution": 0.003
+    },
+    {
+      "bucket": "(11.0, 12.0]",
+      "count": 137745,
+      "events": 2683,
+      "event_rate": 0.0195,
+      "woe": -0.3386,
+      "iv_contribution": 0.0087
+    },
+    {
+      "bucket": "(12.0, 14.0]",
+      "count": 260479,
+      "events": 5598,
+      "event_rate": 0.0215,
+      "woe": -0.2382,
+      "iv_contribution": 0.0086
+    },
+    {
+      "bucket": "(14.0, 15.0]",
+      "count": 133033,
+      "events": 3151,
+      "event_rate": 0.0237,
+      "woe": -0.1387,
+      "iv_contribution": 0.0016
+    },
+    {
+      "bucket": "(15.0, 16.0]",
+      "count": 196490,
+      "events": 4243,
+      "event_rate": 0.0216,
+      "woe": -0.2333,
+      "iv_contribution": 0.0062
+    },
+    {
+      "bucket": "(16.0, 17.0]",
+      "count": 101688,
+      "events": 2564,
+      "event_rate": 0.0252,
+      "woe": -0.0746,
+      "iv_contribution": 0.0004
+    },
+    {
+      "bucket": "(17.0, 18.0]",
+      "count": 252553,
+      "events": 6441,
+      "event_rate": 0.0255,
+      "woe": -0.063,
+      "iv_contribution": 0.0006
+    },
+    {
+      "bucket": "(18.0, 20.0]",
+      "count": 140036,
+      "events": 4755,
+      "event_rate": 0.034,
+      "woe": 0.232,
+      "iv_contribution": 0.0055
+    },
+    {
+      "bucket": "(20.0, 98.0]",
+      "count": 136644,
+      "events": 8154,
+      "event_rate": 0.0597,
+      "woe": 0.8228,
+      "iv_contribution": 0.0899
+    }
+  ],
+  "HR_max_6h": [
+    {
+      "bucket": "(19.999, 70.0]",
+      "count": 156240,
+      "events": 2829,
+      "event_rate": 0.0181,
+      "woe": -0.413,
+      "iv_contribution": 0.0143
+    },
+    {
+      "bucket": "(70.0, 78.0]",
+      "count": 170193,
+      "events": 3294,
+      "event_rate": 0.0194,
+      "woe": -0.3451,
+      "iv_contribution": 0.0112
+    },
+    {
+      "bucket": "(78.0, 83.0]",
+      "count": 247456,
+      "events": 4887,
+      "event_rate": 0.0197,
+      "woe": -0.3246,
+      "iv_contribution": 0.0145
+    },
+    {
+      "bucket": "(83.0, 85.0]",
+      "count": 64620,
+      "events": 1442,
+      "event_rate": 0.0223,
+      "woe": -0.1995,
+      "iv_contribution": 0.0015
+    },
+    {
+      "bucket": "(85.0, 89.0]",
+      "count": 135972,
+      "events": 3065,
+      "event_rate": 0.0225,
+      "woe": -0.1894,
+      "iv_contribution": 0.0029
+    },
+    {
+      "bucket": "(89.0, 94.0]",
+      "count": 176989,
+      "events": 4053,
+      "event_rate": 0.0229,
+      "woe": -0.1733,
+      "iv_contribution": 0.0032
+    },
+    {
+      "bucket": "(94.0, 99.0]",
+      "count": 141379,
+      "events": 3941,
+      "event_rate": 0.0279,
+      "woe": 0.0284,
+      "iv_contribution": 0.0001
+    },
+    {
+      "bucket": "(99.0, 105.0]",
+      "count": 145252,
+      "events": 4757,
+      "event_rate": 0.0327,
+      "woe": 0.1946,
+      "iv_contribution": 0.0039
+    },
+    {
+      "bucket": "(105.0, 114.0]",
+      "count": 151936,
+      "events": 5906,
+      "event_rate": 0.0389,
+      "woe": 0.3723,
+      "iv_contribution": 0.0163
+    },
+    {
+      "bucket": "(114.0, 280.0]",
+      "count": 153326,
+      "events": 7675,
+      "event_rate": 0.0501,
+      "woe": 0.6369,
+      "iv_contribution": 0.055
+    }
+  ],
+  "Temp_min_6h": [
+    {
+      "bucket": "(20.898999999999997, 35.83]",
+      "count": 155730,
+      "events": 4463,
+      "event_rate": 0.0287,
+      "woe": 0.0569,
+      "iv_contribution": 0.0003
+    },
+    {
+      "bucket": "(35.83, 36.11]",
+      "count": 164971,
+      "events": 3343,
+      "event_rate": 0.0203,
+      "woe": -0.2982,
+      "iv_contribution": 0.0083
+    },
+    {
+      "bucket": "(36.11, 36.35]",
+      "count": 142749,
+      "events": 2885,
+      "event_rate": 0.0202,
+      "woe": -0.3009,
+      "iv_contribution": 0.0073
+    },
+    {
+      "bucket": "(36.35, 36.5]",
+      "count": 159125,
+      "events": 3116,
+      "event_rate": 0.0196,
+      "woe": -0.3332,
+      "iv_contribution": 0.0098
+    },
+    {
+      "bucket": "(36.5, 36.7]",
+      "count": 173714,
+      "events": 3773,
+      "event_rate": 0.0217,
+      "woe": -0.2274,
+      "iv_contribution": 0.0052
+    },
+    {
+      "bucket": "(36.7, 36.83]",
+      "count": 270884,
+      "events": 6713,
+      "event_rate": 0.0248,
+      "woe": -0.0924,
+      "iv_contribution": 0.0014
+    },
+    {
+      "bucket": "(36.83, 36.89]",
+      "count": 24921,
+      "events": 644,
+      "event_rate": 0.0258,
+      "woe": -0.0488,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(36.89, 37.1]",
+      "count": 144588,
+      "events": 3205,
+      "event_rate": 0.0222,
+      "woe": -0.2066,
+      "iv_contribution": 0.0036
+    },
+    {
+      "bucket": "(37.1, 37.44]",
+      "count": 156932,
+      "events": 5349,
+      "event_rate": 0.0341,
+      "woe": 0.2359,
+      "iv_contribution": 0.0063
+    },
+    {
+      "bucket": "(37.44, 41.54]",
+      "count": 149749,
+      "events": 8358,
+      "event_rate": 0.0558,
+      "woe": 0.7518,
+      "iv_contribution": 0.0793
+    }
+  ],
+  "Resp": [
+    {
+      "bucket": "(0.999, 13.0]",
+      "count": 180158,
+      "events": 4302,
+      "event_rate": 0.0239,
+      "woe": -0.1304,
+      "iv_contribution": 0.0019
+    },
+    {
+      "bucket": "(13.0, 15.0]",
+      "count": 189735,
+      "events": 4239,
+      "event_rate": 0.0223,
+      "woe": -0.1985,
+      "iv_contribution": 0.0044
+    },
+    {
+      "bucket": "(15.0, 16.0]",
+      "count": 157118,
+      "events": 3114,
+      "event_rate": 0.0198,
+      "woe": -0.3209,
+      "iv_contribution": 0.009
+    },
+    {
+      "bucket": "(16.0, 17.0]",
+      "count": 98296,
+      "events": 2127,
+      "event_rate": 0.0216,
+      "woe": -0.2311,
+      "iv_contribution": 0.0031
+    },
+    {
+      "bucket": "(17.0, 18.0]",
+      "count": 226909,
+      "events": 4563,
+      "event_rate": 0.0201,
+      "woe": -0.3061,
+      "iv_contribution": 0.012
+    },
+    {
+      "bucket": "(18.0, 19.0]",
+      "count": 90577,
+      "events": 2134,
+      "event_rate": 0.0236,
+      "woe": -0.1441,
+      "iv_contribution": 0.0011
+    },
+    {
+      "bucket": "(19.0, 20.0]",
+      "count": 154203,
+      "events": 3828,
+      "event_rate": 0.0248,
+      "woe": -0.0906,
+      "iv_contribution": 0.0008
+    },
+    {
+      "bucket": "(20.0, 22.0]",
+      "count": 166904,
+      "events": 4714,
+      "event_rate": 0.0282,
+      "woe": 0.0419,
+      "iv_contribution": 0.0002
+    },
+    {
+      "bucket": "(22.0, 25.0]",
+      "count": 146255,
+      "events": 5265,
+      "event_rate": 0.036,
+      "woe": 0.2925,
+      "iv_contribution": 0.0093
+    },
+    {
+      "bucket": "(25.0, 100.0]",
+      "count": 133208,
+      "events": 7563,
+      "event_rate": 0.0568,
+      "woe": 0.7699,
+      "iv_contribution": 0.0747
+    }
+  ],
+  "HR_avg_6h": [
+    {
+      "bucket": "(19.999, 64.833]",
+      "count": 156600,
+      "events": 2839,
+      "event_rate": 0.0181,
+      "woe": -0.4117,
+      "iv_contribution": 0.0142
+    },
+    {
+      "bucket": "(64.833, 70.917]",
+      "count": 152247,
+      "events": 2897,
+      "event_rate": 0.019,
+      "woe": -0.3624,
+      "iv_contribution": 0.011
+    },
+    {
+      "bucket": "(70.917, 75.667]",
+      "count": 156022,
+      "events": 3279,
+      "event_rate": 0.021,
+      "woe": -0.261,
+      "iv_contribution": 0.0061
+    },
+    {
+      "bucket": "(75.667, 80.0]",
+      "count": 163610,
+      "events": 3487,
+      "event_rate": 0.0213,
+      "woe": -0.2467,
+      "iv_contribution": 0.0058
+    },
+    {
+      "bucket": "(80.0, 83.0]",
+      "count": 151553,
+      "events": 3377,
+      "event_rate": 0.0223,
+      "woe": -0.2012,
+      "iv_contribution": 0.0036
+    },
+    {
+      "bucket": "(83.0, 87.0]",
+      "count": 146221,
+      "events": 3469,
+      "event_rate": 0.0237,
+      "woe": -0.1371,
+      "iv_contribution": 0.0017
+    },
+    {
+      "bucket": "(87.0, 91.417]",
+      "count": 154845,
+      "events": 4065,
+      "event_rate": 0.0263,
+      "woe": -0.0332,
+      "iv_contribution": 0.0001
+    },
+    {
+      "bucket": "(91.417, 97.167]",
+      "count": 155991,
+      "events": 5038,
+      "event_rate": 0.0323,
+      "woe": 0.1802,
+      "iv_contribution": 0.0036
+    },
+    {
+      "bucket": "(97.167, 105.167]",
+      "count": 152979,
+      "events": 5725,
+      "event_rate": 0.0374,
+      "woe": 0.3328,
+      "iv_contribution": 0.0129
+    },
+    {
+      "bucket": "(105.167, 196.5]",
+      "count": 153295,
+      "events": 7673,
+      "event_rate": 0.0501,
+      "woe": 0.6368,
+      "iv_contribution": 0.055
+    }
+  ],
+  "HR": [
+    {
+      "bucket": "(19.999, 63.0]",
+      "count": 160188,
+      "events": 2908,
+      "event_rate": 0.0182,
+      "woe": -0.4103,
+      "iv_contribution": 0.0145
+    },
+    {
+      "bucket": "(63.0, 70.0]",
+      "count": 175872,
+      "events": 3340,
+      "event_rate": 0.019,
+      "woe": -0.3644,
+      "iv_contribution": 0.0128
+    },
+    {
+      "bucket": "(70.0, 75.0]",
+      "count": 148649,
+      "events": 3154,
+      "event_rate": 0.0212,
+      "woe": -0.2513,
+      "iv_contribution": 0.0054
+    },
+    {
+      "bucket": "(75.0, 80.0]",
+      "count": 180667,
+      "events": 3936,
+      "event_rate": 0.0218,
+      "woe": -0.2243,
+      "iv_contribution": 0.0053
+    },
+    {
+      "bucket": "(80.0, 83.0]",
+      "count": 132121,
+      "events": 2970,
+      "event_rate": 0.0225,
+      "woe": -0.1922,
+      "iv_contribution": 0.0029
+    },
+    {
+      "bucket": "(83.0, 87.0]",
+      "count": 130334,
+      "events": 3284,
+      "event_rate": 0.0252,
+      "woe": -0.0753,
+      "iv_contribution": 0.0005
+    },
+    {
+      "bucket": "(87.0, 92.0]",
+      "count": 167464,
+      "events": 4313,
+      "event_rate": 0.0258,
+      "woe": -0.0529,
+      "iv_contribution": 0.0003
+    },
+    {
+      "bucket": "(92.0, 98.0]",
+      "count": 147137,
+      "events": 4753,
+      "event_rate": 0.0323,
+      "woe": 0.1804,
+      "iv_contribution": 0.0034
+    },
+    {
+      "bucket": "(98.0, 107.0]",
+      "count": 153360,
+      "events": 5673,
+      "event_rate": 0.037,
+      "woe": 0.3208,
+      "iv_contribution": 0.0119
+    },
+    {
+      "bucket": "(107.0, 280.0]",
+      "count": 147571,
+      "events": 7518,
+      "event_rate": 0.0509,
+      "woe": 0.6554,
+      "iv_contribution": 0.0566
+    }
+  ],
+  "HR_deviation_from_normal": [
+    {
+      "bucket": "(-3.001, -0.85]",
+      "count": 160188,
+      "events": 2908,
+      "event_rate": 0.0182,
+      "woe": -0.4103,
+      "iv_contribution": 0.0145
+    },
+    {
+      "bucket": "(-0.85, -0.5]",
+      "count": 175872,
+      "events": 3340,
+      "event_rate": 0.019,
+      "woe": -0.3644,
+      "iv_contribution": 0.0128
+    },
+    {
+      "bucket": "(-0.5, -0.25]",
+      "count": 148649,
+      "events": 3154,
+      "event_rate": 0.0212,
+      "woe": -0.2513,
+      "iv_contribution": 0.0054
+    },
+    {
+      "bucket": "(-0.25, 0.0]",
+      "count": 180667,
+      "events": 3936,
+      "event_rate": 0.0218,
+      "woe": -0.2243,
+      "iv_contribution": 0.0053
+    },
+    {
+      "bucket": "(0.0, 0.15]",
+      "count": 132121,
+      "events": 2970,
+      "event_rate": 0.0225,
+      "woe": -0.1922,
+      "iv_contribution": 0.0029
+    },
+    {
+      "bucket": "(0.15, 0.35]",
+      "count": 130334,
+      "events": 3284,
+      "event_rate": 0.0252,
+      "woe": -0.0753,
+      "iv_contribution": 0.0005
+    },
+    {
+      "bucket": "(0.35, 0.6]",
+      "count": 167464,
+      "events": 4313,
+      "event_rate": 0.0258,
+      "woe": -0.0529,
+      "iv_contribution": 0.0003
+    },
+    {
+      "bucket": "(0.6, 0.9]",
+      "count": 147137,
+      "events": 4753,
+      "event_rate": 0.0323,
+      "woe": 0.1804,
+      "iv_contribution": 0.0034
+    },
+    {
+      "bucket": "(0.9, 1.35]",
+      "count": 153360,
+      "events": 5673,
+      "event_rate": 0.037,
+      "woe": 0.3208,
+      "iv_contribution": 0.0119
+    },
+    {
+      "bucket": "(1.35, 10.0]",
+      "count": 147571,
+      "events": 7518,
+      "event_rate": 0.0509,
+      "woe": 0.6554,
+      "iv_contribution": 0.0566
+    }
+  ],
+  "Resp_abs_deviation_from_normal": [
+    {
+      "bucket": "(-0.001, 0.25]",
+      "count": 365119,
+      "events": 7713,
+      "event_rate": 0.0211,
+      "woe": -0.2558,
+      "iv_contribution": 0.0137
+    },
+    {
+      "bucket": "(0.25, 0.5]",
+      "count": 324117,
+      "events": 6776,
+      "event_rate": 0.0209,
+      "woe": -0.2664,
+      "iv_contribution": 0.0132
+    },
+    {
+      "bucket": "(0.5, 0.75]",
+      "count": 150027,
+      "events": 3498,
+      "event_rate": 0.0233,
+      "woe": -0.1548,
+      "iv_contribution": 0.0022
+    },
+    {
+      "bucket": "(0.75, 1.0]",
+      "count": 210175,
+      "events": 5254,
+      "event_rate": 0.025,
+      "woe": -0.0835,
+      "iv_contribution": 0.0009
+    },
+    {
+      "bucket": "(1.0, 1.25]",
+      "count": 99172,
+      "events": 2672,
+      "event_rate": 0.0269,
+      "woe": -0.0065,
+      "iv_contribution": 0.0
+    },
+    {
+      "bucket": "(1.25, 1.5]",
+      "count": 117195,
+      "events": 3350,
+      "event_rate": 0.0286,
+      "woe": 0.0543,
+      "iv_contribution": 0.0002
+    },
+    {
+      "bucket": "(1.5, 2.25]",
+      "count": 152058,
+      "events": 5306,
+      "event_rate": 0.0349,
+      "woe": 0.2603,
+      "iv_contribution": 0.0076
+    },
+    {
+      "bucket": "(2.25, 21.0]",
+      "count": 125500,
+      "events": 7280,
+      "event_rate": 0.058,
+      "woe": 0.7927,
+      "iv_contribution": 0.0755
+    }
+  ],
+  "Resp_deviation_from_normal": [
+    {
+      "bucket": "(-4.251, -1.0]",
+      "count": 177520,
+      "events": 4308,
+      "event_rate": 0.0243,
+      "woe": -0.1139,
+      "iv_contribution": 0.0014
+    },
+    {
+      "bucket": "(-1.0, -0.5]",
+      "count": 179726,
+      "events": 3714,
+      "event_rate": 0.0207,
+      "woe": -0.2782,
+      "iv_contribution": 0.0079
+    },
+    {
+      "bucket": "(-0.5, 0.0]",
+      "count": 274678,
+      "events": 5705,
+      "event_rate": 0.0208,
+      "woe": -0.2731,
+      "iv_contribution": 0.0117
+    },
+    {
+      "bucket": "(0.0, 0.5]",
+      "count": 303437,
+      "events": 6566,
+      "event_rate": 0.0216,
+      "woe": -0.2313,
+      "iv_contribution": 0.0094
+    },
+    {
+      "bucket": "(0.5, 1.0]",
+      "count": 220259,
+      "events": 5657,
+      "event_rate": 0.0257,
+      "woe": -0.0557,
+      "iv_contribution": 0.0004
+    },
+    {
+      "bucket": "(1.0, 1.5]",
+      "count": 147228,
+      "events": 4475,
+      "event_rate": 0.0304,
+      "woe": 0.1176,
+      "iv_contribution": 0.0014
+    },
+    {
+      "bucket": "(1.5, 2.0]",
+      "count": 94485,
+      "events": 3383,
+      "event_rate": 0.0358,
+      "woe": 0.287,
+      "iv_contribution": 0.0058
+    },
+    {
+      "bucket": "(2.0, 21.0]",
+      "count": 146030,
+      "events": 8041,
+      "event_rate": 0.0551,
+      "woe": 0.7375,
+      "iv_contribution": 0.0739
     }
   ]
 }

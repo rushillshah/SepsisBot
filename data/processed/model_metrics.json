@@ -57,225 +57,255 @@
   "patient_precision": 0.17314387879928483,
   "feature_ranking": [
     {
-      "feature": "iculos_log",
-      "mean_abs_shap": 2.0311
+      "feature": "early_warning_score_avg_6h",
+      "gain": 0.13349266350269318,
+      "mean_abs_shap": 13.349266052246094
     },
     {
-      "feature": "O2Sat_changepoint_hour",
-      "mean_abs_shap": 1.5266962
+      "feature": "early_warning_score_max_6h",
+      "gain": 0.07168824225664139,
+      "mean_abs_shap": 7.168824195861816
     },
     {
-      "feature": "O2Sat_baseline_length",
-      "mean_abs_shap": 0.65108246
+      "feature": "Temp_max_6h",
+      "gain": 0.03629860281944275,
+      "mean_abs_shap": 3.6298604011535645
     },
     {
-      "feature": "Lactate_changepoint_hour",
-      "mean_abs_shap": 0.45330733
-    },
-    {
-      "feature": "Creatinine_changepoint_hour",
-      "mean_abs_shap": 0.43908393
-    },
-    {
-      "feature": "Lactate_baseline_length",
-      "mean_abs_shap": 0.36242062
-    },
-    {
-      "feature": "O2Sat_dynamic_dev_roll_min",
-      "mean_abs_shap": 0.29396862
-    },
-    {
-      "feature": "Creatinine_baseline_length",
-      "mean_abs_shap": 0.28084183
-    },
-    {
-      "feature": "MAP_changepoint_hour",
-      "mean_abs_shap": 0.23465762
-    },
-    {
-      "feature": "Temp_changepoint_hour",
-      "mean_abs_shap": 0.21037768
-    },
-    {
-      "feature": "MAP_baseline_length",
-      "mean_abs_shap": 0.18529299
-    },
-    {
-      "feature": "SBP_changepoint_hour",
-      "mean_abs_shap": 0.16758074
-    },
-    {
-      "feature": "Resp_changepoint_hour",
-      "mean_abs_shap": 0.16712882
-    },
-    {
-      "feature": "MAP_dynamic_dev_roll_min",
-      "mean_abs_shap": 0.14708965
-    },
-    {
-      "feature": "Platelets_dynamic_dev_roll_max",
-      "mean_abs_shap": 0.11726156
+      "feature": "early_warning_score",
+      "gain": 0.034849654883146286,
+      "mean_abs_shap": 3.4849655628204346
     },
     {
       "feature": "Temp",
-      "mean_abs_shap": 0.11356847
+      "gain": 0.03328211233019829,
+      "mean_abs_shap": 3.3282113075256348
     },
     {
-      "feature": "Temp_roll_max",
-      "mean_abs_shap": 0.109479725
+      "feature": "PaCO2_drift_from_normal_6h",
+      "gain": 0.0326111763715744,
+      "mean_abs_shap": 3.261117696762085
     },
     {
-      "feature": "O2Sat_dynamic_dev_roll_max",
-      "mean_abs_shap": 0.1093036
+      "feature": "Resp_avg_6h",
+      "gain": 0.026282861828804016,
+      "mean_abs_shap": 2.628286123275757
     },
     {
-      "feature": "FiO2",
-      "mean_abs_shap": 0.10488937
+      "feature": "EtCO2_std_6h",
+      "gain": 0.02582385390996933,
+      "mean_abs_shap": 2.582385301589966
     },
     {
-      "feature": "Temp_dynamic_dev_roll_min",
-      "mean_abs_shap": 0.10292562
+      "feature": "HR_max_6h",
+      "gain": 0.02163863182067871,
+      "mean_abs_shap": 2.163863182067871
     },
     {
-      "feature": "Age",
-      "mean_abs_shap": 0.09814101
+      "feature": "pH_drift_from_normal_6h",
+      "gain": 0.020152224227786064,
+      "mean_abs_shap": 2.0152223110198975
     },
     {
-      "feature": "HR_baseline_length",
-      "mean_abs_shap": 0.09727523
+      "feature": "Temp_abs_deviation_from_normal",
+      "gain": 0.019997281953692436,
+      "mean_abs_shap": 1.9997282028198242
     },
     {
-      "feature": "Temp_baseline_length",
-      "mean_abs_shap": 0.09539456
+      "feature": "early_warning_score_min_6h",
+      "gain": 0.018410254269838333,
+      "mean_abs_shap": 1.841025471687317
     },
     {
-      "feature": "Creatinine_dynamic_dev_roll_mean",
-      "mean_abs_shap": 0.09455153
+      "feature": "SBP_std_6h",
+      "gain": 0.017665447667241096,
+      "mean_abs_shap": 1.7665448188781738
     },
     {
-      "feature": "SBP_roll_min",
-      "mean_abs_shap": 0.085936114
+      "feature": "Lactate_drift_from_normal_6h",
+      "gain": 0.016762621700763702,
+      "mean_abs_shap": 1.6762621402740479
     },
     {
-      "feature": "MAP_roll_min",
-      "mean_abs_shap": 0.081664525
+      "feature": "Resp",
+      "gain": 0.016497904434800148,
+      "mean_abs_shap": 1.6497904062271118
     },
     {
-      "feature": "SBP_baseline_length",
-      "mean_abs_shap": 0.081298865
+      "feature": "Resp_abs_deviation_from_normal",
+      "gain": 0.012699603103101254,
+      "mean_abs_shap": 1.2699602842330933
     },
     {
-      "feature": "Platelets_changepoint_hour",
-      "mean_abs_shap": 0.08043016
+      "feature": "O2Sat_abs_deviation_from_normal",
+      "gain": 0.012225900776684284,
+      "mean_abs_shap": 1.2225900888442993
     },
     {
-      "feature": "iculos_bucket",
-      "mean_abs_shap": 0.080238074
+      "feature": "BaseExcess_drift_from_normal_6h",
+      "gain": 0.01213707122951746,
+      "mean_abs_shap": 1.2137070894241333
     },
     {
-      "feature": "Hct",
-      "mean_abs_shap": 0.07990515
+      "feature": "PaCO2_drift_from_normal",
+      "gain": 0.011251648887991905,
+      "mean_abs_shap": 1.1251648664474487
+    },
+    {
+      "feature": "MAP_min_6h",
+      "gain": 0.010557981207966805,
+      "mean_abs_shap": 1.0557981729507446
+    },
+    {
+      "feature": "BUN_drift_from_normal_6h",
+      "gain": 0.009213066659867764,
+      "mean_abs_shap": 0.9213066697120667
+    },
+    {
+      "feature": "WBC_drift_from_normal_6h",
+      "gain": 0.008928596042096615,
+      "mean_abs_shap": 0.8928595781326294
+    },
+    {
+      "feature": "HR",
+      "gain": 0.008746938779950142,
+      "mean_abs_shap": 0.8746938705444336
+    },
+    {
+      "feature": "DBP_deviation_from_normal",
+      "gain": 0.00860222801566124,
+      "mean_abs_shap": 0.8602228164672852
+    },
+    {
+      "feature": "Bilirubin_total_drift_from_normal_6h",
+      "gain": 0.00857100635766983,
+      "mean_abs_shap": 0.8571006059646606
+    },
+    {
+      "feature": "Magnesium_drift_from_normal_6h",
+      "gain": 0.008409128524363041,
+      "mean_abs_shap": 0.8409128785133362
+    },
+    {
+      "feature": "Resp_min_6h",
+      "gain": 0.007872250862419605,
+      "mean_abs_shap": 0.787225067615509
+    },
+    {
+      "feature": "Creatinine_drift_from_normal_6h",
+      "gain": 0.007851142436265945,
+      "mean_abs_shap": 0.7851142287254333
+    },
+    {
+      "feature": "Resp_std_6h",
+      "gain": 0.007816310971975327,
+      "mean_abs_shap": 0.7816311120986938
+    },
+    {
+      "feature": "Lactate_drift_from_normal",
+      "gain": 0.0073075080290436745,
+      "mean_abs_shap": 0.7307507991790771
     }
   ],
   "iv_top20": [
     {
-      "feature": "FiO2_abs_deviation_from_normal",
-      "iv": 0.4626415649323317,
-      "iv_strength": "Strong"
+      "feature": "early_warning_score_avg_6h",
+      "iv": 0.23050649634890874,
+      "iv_strength": "Medium"
     },
     {
-      "feature": "FiO2_deviation_from_normal",
-      "iv": 0.4622979182419956,
-      "iv_strength": "Strong"
+      "feature": "early_warning_score_max_6h",
+      "iv": 0.2120899823649231,
+      "iv_strength": "Medium"
     },
     {
-      "feature": "FiO2",
-      "iv": 0.4622979182419956,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "Lactate_abs_deviation_from_normal",
-      "iv": 0.37106011363504243,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "pH_deviation_from_normal",
-      "iv": 0.3423496036670028,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "pH",
-      "iv": 0.3423496036670028,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "PaCO2_abs_deviation_from_normal",
-      "iv": 0.33398090176150413,
-      "iv_strength": "Strong"
+      "feature": "early_warning_score",
+      "iv": 0.19113687126319365,
+      "iv_strength": "Medium"
     },
     {
       "feature": "Temp_max_6h",
-      "iv": 0.32558615940838703,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "PaCO2_hours_since",
-      "iv": 0.3026937084364411,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "BUN_deviation_from_normal",
-      "iv": 0.30089557176985643,
-      "iv_strength": "Strong"
-    },
-    {
-      "feature": "pH_abs_deviation_from_normal",
-      "iv": 0.2867371059050285,
+      "iv": 0.1894114490280458,
       "iv_strength": "Medium"
     },
     {
-      "feature": "early_warning_score_avg_6h",
-      "iv": 0.28561949140923204,
+      "feature": "Temp",
+      "iv": 0.18011806076530198,
       "iv_strength": "Medium"
     },
     {
-      "feature": "PaCO2",
-      "iv": 0.2819442688697989,
+      "feature": "Temp_avg_6h",
+      "iv": 0.16189151300915894,
       "iv_strength": "Medium"
     },
     {
-      "feature": "PaCO2_deviation_from_normal",
-      "iv": 0.2819442688697989,
+      "feature": "Temp_deviation_from_normal",
+      "iv": 0.15894684432484119,
       "iv_strength": "Medium"
     },
     {
-      "feature": "WBC_avg_6h",
-      "iv": 0.2789735675518827,
+      "feature": "Temp_abs_deviation_from_normal",
+      "iv": 0.1535197019053445,
       "iv_strength": "Medium"
     },
     {
-      "feature": "pH_hours_since",
-      "iv": 0.2775624822397591,
+      "feature": "early_warning_score_min_6h",
+      "iv": 0.1529493481013568,
       "iv_strength": "Medium"
     },
     {
-      "feature": "Magnesium_deviation_from_normal",
-      "iv": 0.2765056271934087,
+      "feature": "Resp_avg_6h",
+      "iv": 0.14895396789473295,
       "iv_strength": "Medium"
     },
     {
-      "feature": "Magnesium",
-      "iv": 0.2765056271934087,
+      "feature": "Resp_max_6h",
+      "iv": 0.12518691888956737,
       "iv_strength": "Medium"
     },
     {
-      "feature": "WBC_deviation_from_normal",
-      "iv": 0.27219426810529646,
+      "feature": "Resp_min_6h",
+      "iv": 0.12447761709482844,
       "iv_strength": "Medium"
     },
     {
-      "feature": "FiO2_hours_since",
-      "iv": 0.2694417876163924,
+      "feature": "HR_max_6h",
+      "iv": 0.12292151602449103,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "Temp_min_6h",
+      "iv": 0.12172667243386306,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "Resp",
+      "iv": 0.11648477351212469,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "HR_avg_6h",
+      "iv": 0.11389475648040498,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "HR",
+      "iv": 0.11353191612510985,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "HR_deviation_from_normal",
+      "iv": 0.11353191612510985,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "Resp_abs_deviation_from_normal",
+      "iv": 0.1132738151568706,
+      "iv_strength": "Medium"
+    },
+    {
+      "feature": "Resp_deviation_from_normal",
+      "iv": 0.11200772380999799,
       "iv_strength": "Medium"
     }
   ],
@@ -95782,7 +95812,7 @@
     "gamma": 0.5,
     "colsample_bytree": 0.7
   },
-  "n_features": 389,
+  "n_features": 158,
   "default_threshold": 0.3,
   "exclusion_note": {
     "early_onset_patients_excluded": 703,
@@ -187128,36 +187158,36 @@
     1.0
   ],
   "feature_importance": {
-    "iculos_bucket": 4.982685,
-    "Lactate_changepoint_hour": 4.459221,
-    "mews_mod": 3.5100322,
-    "Phosphate_hours_since": 3.06657,
-    "iculos_log": 2.6574237,
-    "FiO2": 2.5198042,
-    "mews_mod_roll_max": 2.074971,
-    "qsofa_mod_roll_mean": 1.9896861,
-    "mews_mod_roll_min": 1.8927591,
-    "sirs_score_roll_min": 1.6814344,
-    "qsofa_mod_roll_min": 1.6530507,
-    "Temp_roll_max": 1.4380206,
-    "Creatinine_baseline_length": 1.3019617,
-    "Lactate_baseline_length": 1.2863858,
-    "FiO2_hours_since": 1.2617745,
-    "sirs_score_roll_max": 1.249057,
-    "Temp": 1.2410647,
-    "Lactate_roll_std": 1.2157992,
-    "HR_roll_mean": 1.1388425,
-    "O2Sat_changepoint_hour": 1.0932424,
-    "EtCO2_roll_std": 1.0739158,
-    "O2Sat_baseline_length": 1.0446299,
-    "Resp_roll_mean": 1.0252599,
-    "Bilirubin_total": 1.0060562,
-    "mews_mod_roll_mean": 0.978164,
-    "Creatinine_changepoint_hour": 0.9579766,
-    "sirs_score": 0.8923446,
-    "Creatinine_dynamic_dev_roll_min": 0.88734895,
-    "Calcium_hours_since": 0.8457318,
-    "Lactate_dynamic_dev_roll_min": 0.8362999
+    "early_warning_score_avg_6h": 13.349266052246094,
+    "early_warning_score_max_6h": 7.168824195861816,
+    "Temp_max_6h": 3.6298604011535645,
+    "early_warning_score": 3.4849655628204346,
+    "Temp": 3.3282113075256348,
+    "PaCO2_drift_from_normal_6h": 3.261117696762085,
+    "Resp_avg_6h": 2.628286123275757,
+    "EtCO2_std_6h": 2.582385301589966,
+    "HR_max_6h": 2.163863182067871,
+    "pH_drift_from_normal_6h": 2.0152223110198975,
+    "Temp_abs_deviation_from_normal": 1.9997282028198242,
+    "early_warning_score_min_6h": 1.841025471687317,
+    "SBP_std_6h": 1.7665448188781738,
+    "Lactate_drift_from_normal_6h": 1.6762621402740479,
+    "Resp": 1.6497904062271118,
+    "Resp_abs_deviation_from_normal": 1.2699602842330933,
+    "O2Sat_abs_deviation_from_normal": 1.2225900888442993,
+    "BaseExcess_drift_from_normal_6h": 1.2137070894241333,
+    "PaCO2_drift_from_normal": 1.1251648664474487,
+    "MAP_min_6h": 1.0557981729507446,
+    "BUN_drift_from_normal_6h": 0.9213066697120667,
+    "WBC_drift_from_normal_6h": 0.8928595781326294,
+    "HR": 0.8746938705444336,
+    "DBP_deviation_from_normal": 0.8602228164672852,
+    "Bilirubin_total_drift_from_normal_6h": 0.8571006059646606,
+    "Magnesium_drift_from_normal_6h": 0.8409128785133362,
+    "Resp_min_6h": 0.787225067615509,
+    "Creatinine_drift_from_normal_6h": 0.7851142287254333,
+    "Resp_std_6h": 0.7816311120986938,
+    "Lactate_drift_from_normal": 0.7307507991790771
   },
   "label_variants": {
     "full_label": {

@@ -18,9 +18,11 @@ from sklearn.model_selection import (
 from xgboost import XGBClassifier
 
 from src.config import (
+    COLLINEARITY_THRESHOLD,
     CV_FOLDS,
     CV_N_ITER,
     DEFAULT_THRESHOLD,
+    ENABLE_COLLINEARITY_PRUNING,
     INNER_CV_FOLDS,
     LABEL_COL,
     MIN_CONSECUTIVE_HOURS,
@@ -29,6 +31,7 @@ from src.config import (
     XGBOOST_PARAM_GRID_V2,
 )
 from src.evaluate import compute_metrics, find_optimal_threshold
+from src.feature_selection import prune_collinear_by_iv
 from src.features import scale_features
 
 
@@ -94,6 +97,22 @@ def _train_fold(
     val_pids = patient_ids[val_idx]
     val_labels_raw = y_eval_labels[val_idx]
     val_iculos = iculos[val_idx]
+
+    pruning_audit = pd.DataFrame()
+    train_iv_df = pd.DataFrame()
+    if ENABLE_COLLINEARITY_PRUNING:
+        kept_features, pruning_audit, train_iv_df = prune_collinear_by_iv(
+            X_train_raw,
+            y_train,
+            threshold=COLLINEARITY_THRESHOLD,
+        )
+        dropped_count = X_train_raw.shape[1] - len(kept_features)
+        X_train_raw = X_train_raw[kept_features]
+        X_val_raw = X_val_raw[kept_features]
+        print(
+            f"    Collinearity pruning: {X.shape[1]} -> {len(kept_features)} "
+            f"features (dropped {dropped_count}, |r|>={COLLINEARITY_THRESHOLD})"
+        )
 
     # ── Oversample sepsis rows (numpy index repetition, no DataFrame concat) ─
     sepsis_idx = np.where(y_train == 1)[0]
@@ -190,6 +209,9 @@ def _train_fold(
         "val_labels": val_labels_raw,
         "val_iculos": val_iculos,
         "scaler": scaler,
+        "selected_features": list(X_train_raw.columns),
+        "collinearity_audit": pruning_audit.to_dict(orient="records"),
+        "train_iv": train_iv_df.to_dict(orient="records"),
     }
 
 
@@ -331,6 +353,19 @@ def cross_validate_pipeline(
             "xgb_probs": all_xgb_probs,
             "lr_probs": all_lr_probs,
             "iculos": all_iculos,
+        },
+        "feature_selection": {
+            "enabled": ENABLE_COLLINEARITY_PRUNING,
+            "threshold": COLLINEARITY_THRESHOLD,
+            "folds": [
+                {
+                    "fold": i,
+                    "n_selected_features": len(r.get("selected_features", [])),
+                    "selected_features": r.get("selected_features", []),
+                    "dropped_pairs": r.get("collinearity_audit", []),
+                }
+                for i, r in enumerate(fold_results, 1)
+            ],
         },
     }
 

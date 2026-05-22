@@ -240,18 +240,25 @@ def compute_shap_values(
     pd.DataFrame
         Columns: feature, mean_abs_shap.  Sorted descending.
     """
-    import matplotlib  # heavy imports — only needed by this function
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import shap
+    try:
+        import shap
 
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_sample)
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_sample)
 
-    # For binary classifiers, shap_values may be a list of two arrays;
-    # use the positive-class array.
-    if isinstance(shap_values, list):
-        shap_values = shap_values[1]
+        # For binary classifiers, shap_values may be a list of two arrays;
+        # use the positive-class array.
+        if isinstance(shap_values, list):
+            shap_values = shap_values[1]
+    except Exception as exc:
+        print(f"  [warn] SHAP package path failed; using XGBoost pred_contribs: {exc}")
+        from xgboost import DMatrix
+
+        if not isinstance(X_sample, pd.DataFrame):
+            X_sample = pd.DataFrame(X_sample, columns=feature_names)
+        dmatrix = DMatrix(X_sample, feature_names=feature_names)
+        contribs = model.get_booster().predict(dmatrix, pred_contribs=True)
+        shap_values = contribs[:, :-1]
 
     mean_abs = np.abs(shap_values).mean(axis=0)
 
@@ -269,17 +276,27 @@ def compute_shap_values(
         if not isinstance(X_sample, pd.DataFrame):
             X_sample = pd.DataFrame(X_sample, columns=feature_names)
 
-        # Beeswarm summary plot.
-        shap.summary_plot(shap_values, X_sample, show=False)
-        plt.savefig(save_path / "shap_summary.png", dpi=150, bbox_inches="tight")
-        plt.close()
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+            import shap
 
-        # Bar plot of mean |SHAP|.
-        shap.summary_plot(
-            shap_values, X_sample, plot_type="bar", show=False,
-        )
-        plt.savefig(save_path / "shap_bar.png", dpi=150, bbox_inches="tight")
-        plt.close()
+            # Beeswarm summary plot.
+            shap.summary_plot(shap_values, X_sample, max_display=50, show=False)
+            plt.savefig(save_path / "shap_summary.png", dpi=150, bbox_inches="tight")
+            plt.savefig(save_path / "shap_top50_beeswarm.png", dpi=150, bbox_inches="tight")
+            plt.close()
+
+            # Bar plot of mean |SHAP|.
+            shap.summary_plot(
+                shap_values, X_sample, plot_type="bar", max_display=50, show=False,
+            )
+            plt.savefig(save_path / "shap_bar.png", dpi=150, bbox_inches="tight")
+            plt.savefig(save_path / "shap_top50_bar.png", dpi=150, bbox_inches="tight")
+            plt.close()
+        except Exception as exc:
+            print(f"  [warn] SHAP PNG plots skipped: {exc}")
 
     return df
 

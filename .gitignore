@@ -36,3 +36,6 @@ Thumbs.db
 
 # Model artifacts (except the ones we explicitly track)
 *.joblib
+
+# Generated presentation workspaces / previews
+outputs/

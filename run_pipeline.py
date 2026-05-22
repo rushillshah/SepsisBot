@@ -11,11 +11,30 @@ import gc
 import json
 import sys
 
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve
+from xgboost import XGBClassifier
 
-from src.config import DATA_PROCESSED
+from src.config import (
+    COLLINEARITY_THRESHOLD,
+    DATA_PROCESSED,
+    RANDOM_STATE,
+    XGBOOST_PARAM_GRID_V2,
+)
 from src.data_loader import load_all_data, load_processed, save_processed
+from src.feature_importance import (
+    combined_feature_ranking,
+    compute_gain_importance,
+    compute_information_value,
+    compute_shap_values,
+    compute_woe_buckets,
+)
+from src.feature_selection import prune_collinear_by_iv
 from src.features import build_feature_matrix
+from src.features import scale_features
 from src.imputation import impute
 from src.train_cv import cross_validate_pipeline
 
@@ -84,6 +103,124 @@ def _print_summary(cv_results: dict) -> None:
     print(f"    {DATA_PROCESSED / 'model_metrics.json'}")
     print(f"    {DATA_PROCESSED / 'models/'}")
     print("=" * 60)
+
+
+def _oversample_positive_rows(
+    X: pd.DataFrame,
+    y: np.ndarray,
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Match the CV oversampling rule for final artifact training."""
+    sepsis_idx = np.where(y == 1)[0]
+    n_sepsis = len(sepsis_idx)
+    n_nonsepsis = len(y) - n_sepsis
+    if n_sepsis == 0:
+        return X, y
+
+    target = n_nonsepsis // 3
+    oversample_factor = max(1, target // n_sepsis)
+    if oversample_factor <= 1:
+        return X, y
+
+    repeat_idx = np.tile(sepsis_idx, oversample_factor - 1)
+    all_idx = np.concatenate([np.arange(len(y)), repeat_idx])
+    return X.iloc[all_idx].reset_index(drop=True), y[all_idx]
+
+
+def _train_final_artifacts(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    best_params: dict,
+) -> dict:
+    """Train final full-data models and regenerate importance artifacts."""
+    print("  Final feature pruning for saved model/SHAP artifacts ...")
+    final_features, audit_df, _ = prune_collinear_by_iv(
+        X,
+        y,
+        threshold=COLLINEARITY_THRESHOLD,
+    )
+    X_final = X[final_features]
+
+    fa_dir = DATA_PROCESSED / "feature_analysis"
+    models_dir = DATA_PROCESSED / "models"
+    fa_dir.mkdir(parents=True, exist_ok=True)
+    models_dir.mkdir(parents=True, exist_ok=True)
+
+    audit_df.to_csv(fa_dir / "collinearity_pruning_audit.csv", index=False)
+    pd.DataFrame({"feature": final_features}).to_csv(
+        fa_dir / "final_feature_list.csv",
+        index=False,
+    )
+
+    X_over, y_over = _oversample_positive_rows(X_final, y)
+    X_scaled, _, scaler = scale_features(X_over, X_over)
+
+    lr = LogisticRegression(
+        C=1.0,
+        class_weight="balanced",
+        max_iter=2000,
+        solver="lbfgs",
+        random_state=RANDOM_STATE,
+    )
+    lr.fit(X_scaled, y_over)
+
+    params = best_params or {
+        key: values[0] for key, values in XGBOOST_PARAM_GRID_V2.items()
+    }
+    scale_pos_weight = float((y_over == 0).sum()) / max(float((y_over == 1).sum()), 1)
+    xgb = XGBClassifier(
+        **params,
+        eval_metric="logloss",
+        scale_pos_weight=scale_pos_weight,
+        random_state=RANDOM_STATE,
+    )
+    xgb.fit(X_scaled, y_over)
+
+    joblib.dump(scaler, models_dir / "scaler.pkl")
+    joblib.dump(lr, models_dir / "logistic_model.pkl")
+    joblib.dump(xgb, models_dir / "xgboost_model.pkl")
+    joblib.dump(final_features, models_dir / "feature_names.pkl")
+
+    print("  Computing final IV, gain, SHAP, and combined rankings ...")
+    iv_df = compute_information_value(X_final, pd.Series(y, index=X_final.index))
+    iv_df.to_csv(fa_dir / "iv_ranking.csv", index=False)
+
+    gain_df = compute_gain_importance(xgb, final_features)
+    gain_df.to_csv(fa_dir / "gain_ranking.csv", index=False)
+
+    sample_size = min(10_000, len(X_final))
+    rng = np.random.default_rng(RANDOM_STATE)
+    sample_idx = rng.choice(len(X_final), size=sample_size, replace=False)
+    X_sample = X_final.iloc[sample_idx]
+    X_sample_scaled = pd.DataFrame(
+        scaler.transform(X_sample),
+        columns=final_features,
+        index=X_sample.index,
+    )
+    shap_df = compute_shap_values(
+        xgb,
+        X_sample_scaled,
+        final_features,
+        save_dir=fa_dir,
+    )
+    shap_df.to_csv(fa_dir / "shap_ranking.csv", index=False)
+
+    ranking_df = combined_feature_ranking(iv_df, gain_df, shap_df, top_n=100)
+    ranking_df.to_csv(fa_dir / "combined_ranking.csv", index=False)
+
+    top_features = iv_df.head(20)["feature"].tolist()
+    woe_buckets = compute_woe_buckets(X_final, pd.Series(y, index=X_final.index), features=top_features)
+    woe_json = {k: v.to_dict(orient="records") for k, v in woe_buckets.items()}
+    with open(fa_dir / "woe_buckets.json", "w") as f:
+        json.dump(woe_json, f, indent=2)
+
+    return {
+        "features": final_features,
+        "audit": audit_df,
+        "iv": iv_df,
+        "gain": gain_df,
+        "shap": shap_df,
+        "ranking": ranking_df,
+    }
 
 
 def run() -> None:
@@ -171,13 +308,19 @@ def run() -> None:
 
     last_fold = cv_results["fold_results"][-1]
     best_params = last_fold.get("xgb_best_params", {})
+    final_artifacts = _train_final_artifacts(X_all, y_early.to_numpy(), best_params)
+    feature_names = final_artifacts["features"]
 
     # ── 4. Save artifacts ──────────────────────────────────────────────────
     print("\n[Step 4/4] Saving evaluation artifacts ...")
     DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
     # Dashboard JSON — all metrics from CV concatenated predictions
-    dashboard_json = _build_dashboard_json(cv_results, None, None)
+    dashboard_json = _build_dashboard_json(
+        cv_results,
+        final_artifacts["ranking"],
+        final_artifacts["iv"],
+    )
     dashboard_json["xgb_best_params"] = best_params
     dashboard_json["n_features"] = len(feature_names)
     from src.config import DEFAULT_THRESHOLD
@@ -203,7 +346,7 @@ def run() -> None:
             "xgb_precision": fr["xgb_metrics"]["precision"],
             "xgb_f1": fr["xgb_metrics"]["f1"],
             "xgb_pr_auc": fr["xgb_metrics"]["pr_auc"],
-            "xgb_train_auroc": fr["lr_train_auroc"],
+            "xgb_train_auroc": fr["xgb_train_auroc"],
             "xgb_best_params": fr["xgb_best_params"],
             "xgb_threshold": fr["xgb_threshold"],
             "lr_auroc": fr["lr_metrics"]["auroc"],
@@ -239,6 +382,13 @@ def run() -> None:
 
     # Consecutive-hour alert analysis
     dashboard_json["consecutive_alert_analysis"] = cv_results.get("consecutive_alert_analysis", [])
+    dashboard_json["feature_selection"] = cv_results.get("feature_selection", {})
+    dashboard_json["feature_selection"]["final_model"] = {
+        "threshold": COLLINEARITY_THRESHOLD,
+        "n_selected_features": len(feature_names),
+        "selected_features": feature_names,
+        "n_dropped_pairs": len(final_artifacts["audit"]),
+    }
 
     # Patient-level metrics at default threshold
     ta = cv_results.get("threshold_analysis", [])
@@ -267,38 +417,11 @@ def run() -> None:
         dashboard_json["lr_fpr"] = fpr_lr.tolist()
         dashboard_json["lr_tpr"] = tpr_lr.tolist()
 
-    # Feature importance — compute fresh IV + WOE buckets
-    print("  Computing feature importance (IV, WOE buckets) ...")
-    from src.feature_importance import compute_information_value, compute_woe_buckets
-    iv_df = compute_information_value(X_all, y_early)
-    fa_dir = DATA_PROCESSED / "feature_analysis"
-    fa_dir.mkdir(parents=True, exist_ok=True)
-    iv_df.to_csv(fa_dir / "iv_ranking.csv", index=False)
-    dashboard_json["iv_top20"] = iv_df.head(20).to_dict(orient="records")
-
-    # WOE buckets for top 20 features by IV
-    top_features = iv_df.head(20)["feature"].tolist()
-    woe_buckets = compute_woe_buckets(X_all, y_early, features=top_features)
-    woe_json = {k: v.to_dict(orient="records") for k, v in woe_buckets.items()}
-    with open(fa_dir / "woe_buckets.json", "w") as f:
-        json.dump(woe_json, f, indent=2)
-    print(f"  Saved IV ranking + WOE buckets for {len(woe_json)} features")
-
-    # Load existing feature importance if available (gain, SHAP from prior runs)
-    if (fa_dir / "shap_ranking.csv").exists():
-        import pandas as pd
-        shap_df = pd.read_csv(fa_dir / "shap_ranking.csv")
-        gain_path = fa_dir / "gain_ranking.csv"
-        gain_df = pd.read_csv(gain_path) if gain_path.exists() else None
-        fi = {}
-        if gain_df is not None:
-            for _, r in gain_df.head(30).iterrows():
-                fi[r["feature"]] = float(r["gain_pct"])
-        else:
-            for _, r in shap_df.head(30).iterrows():
-                fi[r["feature"]] = float(r["mean_abs_shap"])
-        dashboard_json["feature_importance"] = fi
-        dashboard_json["feature_ranking"] = shap_df.head(30).to_dict(orient="records")
+    dashboard_json["feature_importance"] = {
+        r["feature"]: float(r["mean_abs_shap"])
+        for _, r in final_artifacts["shap"].head(30).iterrows()
+    }
+    dashboard_json["feature_ranking"] = final_artifacts["ranking"].head(30).to_dict(orient="records")
 
     metrics_path = DATA_PROCESSED / "model_metrics.json"
     with open(metrics_path, "w") as f:
@@ -309,7 +432,7 @@ def run() -> None:
     print("  Computing per-lead-time feature importance ...")
     from src.leadup_analysis import run_leadup_analysis
     run_leadup_analysis(
-        X=X_all,
+        X=X_all[feature_names],
         y_early=y_early,
         eval_labels=eval_labels,
         patient_ids=patient_ids,

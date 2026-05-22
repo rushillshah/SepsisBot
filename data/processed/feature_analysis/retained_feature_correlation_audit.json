@@ -1,0 +1,8 @@
+{
+  "n_features": 119,
+  "max_abs_corr_retained": 0.7727439748718827,
+  "max_corr_pair": [
+    "MAP",
+    "MAP_min_6h"
+  ]
+}

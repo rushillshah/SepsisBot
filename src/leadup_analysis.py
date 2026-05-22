@@ -273,8 +273,15 @@ def run_leadup_analysis(
     print(f"    Lead-time bin counts: {counts.to_dict()}")
 
     if skip_if_exists and iv_path.exists():
-        print(f"    IV cache found at {iv_path} — loading")
-        iv_df = pd.read_csv(iv_path, index_col=0)
+        cached_iv = pd.read_csv(iv_path, index_col=0)
+        if list(cached_iv.index) == list(X.columns):
+            print(f"    IV cache found at {iv_path} — loading")
+            iv_df = cached_iv
+        else:
+            print(f"    IV cache feature mismatch at {iv_path} — recomputing")
+            iv_df = iv_per_lead_time(X, lead_bins)
+            iv_df.to_csv(iv_path)
+            print(f"    Saved {iv_path} ({iv_df.shape[0]} features × {iv_df.shape[1]} bins)")
     else:
         print("  [leadup] computing IV per lead-time bin ...")
         iv_df = iv_per_lead_time(X, lead_bins)

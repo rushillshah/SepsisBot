@@ -338,5 +338,10 @@ CV_N_ITER = 5
 
 CV_FOLDS = 3
 INNER_CV_FOLDS = 3
+
+# Drop one feature from any pair with |Pearson r| >= this value, keeping the
+# higher-IV feature. Applied inside CV folds for honest validation metrics.
+COLLINEARITY_THRESHOLD = 0.80
+ENABLE_COLLINEARITY_PRUNING = True
 RANDOM_STATE = 42
 DEFAULT_THRESHOLD = 0.30

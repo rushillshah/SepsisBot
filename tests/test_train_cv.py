@@ -10,6 +10,7 @@ from src.config import (
     VITAL_COLS,
 )
 from src.train_cv import patient_stratified_split
+from src.feature_selection import prune_collinear_by_iv
 
 
 # ── Fixture ───────────────────────────────────────────────────────────────────
@@ -119,3 +120,23 @@ class TestPatientStratifiedSplit:
             assert has_sepsis, (
                 f"Fold {fold_num} training set has no sepsis patients."
             )
+
+
+class TestCollinearityPruning:
+    def test_drops_lower_iv_feature_from_correlated_pair(self) -> None:
+        y = np.array([0, 0, 0, 1, 1, 1] * 10)
+        high_iv = pd.Series(y, dtype=float)
+        low_iv = high_iv + np.linspace(0.0, 0.01, len(high_iv))
+        independent = np.arange(len(high_iv), dtype=float) % 7
+        X = pd.DataFrame({
+            "high_iv": high_iv,
+            "low_iv": low_iv,
+            "independent": independent,
+        })
+
+        kept, audit, _ = prune_collinear_by_iv(X, y, threshold=0.8)
+
+        assert "high_iv" in kept
+        assert "low_iv" not in kept
+        assert "independent" in kept
+        assert audit.iloc[0]["dropped_feature"] == "low_iv"
